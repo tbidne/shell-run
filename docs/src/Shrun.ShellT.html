@@ -1,0 +1,620 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- | Provides the 'ShellT' monad transformer.</span><span>
+</span><span id="line-4"></span><span class="hs-comment">--</span><span>
+</span><span id="line-5"></span><span class="hs-comment">-- @since 0.1</span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Shrun.ShellT</span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Shrun.ShellT.html#ShellT"><span class="hs-identifier">ShellT</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span>    </span><span class="annot"><a href="Shrun.ShellT.html#runShellT"><span class="hs-identifier">runShellT</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Shrun.Configuration.Env.Types.html"><span class="hs-identifier">Shrun.Configuration.Env.Types</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Shrun.Configuration.Env.Types.html#Env"><span class="hs-identifier">Env</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Shrun.Effects.FileSystemReader.html"><span class="hs-identifier">Shrun.Effects.FileSystemReader</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Shrun.Effects.FileSystemReader.html#FileSystemReader"><span class="hs-identifier">FileSystemReader</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Shrun.Effects.FileSystemWriter.html"><span class="hs-identifier">Shrun.Effects.FileSystemWriter</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Shrun.Effects.FileSystemWriter.html#FileSystemWriter"><span class="hs-identifier">FileSystemWriter</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Shrun.Effects.Mutable.html"><span class="hs-identifier">Shrun.Effects.Mutable</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Shrun.Effects.Process.html"><span class="hs-identifier">Shrun.Effects.Process</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Shrun.Effects.Process.html#Process"><span class="hs-identifier">Process</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Shrun.Effects.Terminal.html"><span class="hs-identifier">Shrun.Effects.Terminal</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Shrun.Effects.Terminal.html#Terminal"><span class="hs-identifier">Terminal</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Shrun.Effects.Timing.html"><span class="hs-identifier">Shrun.Effects.Timing</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Shrun.Effects.Timing.html#Timing"><span class="hs-identifier">Timing</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Shrun.IO.html"><span class="hs-identifier">Shrun.IO</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">ShIO</span></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Shrun.Logging.RegionLogger.html"><span class="hs-identifier">Shrun.Logging.RegionLogger</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Shrun.Logging.RegionLogger.html#RegionLogger"><span class="hs-identifier">RegionLogger</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Shrun.Logging.Types.html"><span class="hs-identifier">Shrun.Logging.Types</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Shrun.Logging.Types.html#LogMode"><span class="hs-identifier">LogMode</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Shrun.Prelude.html"><span class="hs-identifier">Shrun.Prelude</span></a></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/5pfzhq3bq71djxihr3a31i6bkhzab9dr-concurrent-output-1.10.16-doc/share/doc/concurrent-output-1.10.16/html/src/System.Console.Regions.html"><span class="hs-identifier">System.Console.Regions</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/5pfzhq3bq71djxihr3a31i6bkhzab9dr-concurrent-output-1.10.16-doc/share/doc/concurrent-output-1.10.16/html/src/System.Console.Regions.html#ConsoleRegion"><span class="hs-identifier">ConsoleRegion</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/5pfzhq3bq71djxihr3a31i6bkhzab9dr-concurrent-output-1.10.16-doc/share/doc/concurrent-output-1.10.16/html/src/System.Console.Regions.html"><span class="hs-identifier">System.Console.Regions</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Regions</span></span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-comment">-- | `ShellT` is the main application type that runs shell commands.</span><span>
+</span><span id="line-27"></span><span class="hs-comment">--</span><span>
+</span><span id="line-28"></span><span class="hs-comment">-- @since 0.1</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">type</span><span> </span><span class="annot"><a href="Shrun.ShellT.html#ShellT"><span class="hs-identifier hs-type">ShellT</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/ghc-prim-0.8.0/src/GHC.Types.html#Type"><span class="hs-identifier hs-type">Type</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/ghc-prim-0.8.0/src/GHC.Types.html#Type"><span class="hs-identifier hs-type">Type</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/ghc-prim-0.8.0/src/GHC.Types.html#Type"><span class="hs-identifier hs-type">Type</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/ghc-prim-0.8.0/src/GHC.Types.html#Type"><span class="hs-identifier hs-type">Type</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/ghc-prim-0.8.0/src/GHC.Types.html#Type"><span class="hs-identifier hs-type">Type</span></a></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">newtype</span><span> </span><span id="ShellT"><span class="annot"><a href="Shrun.ShellT.html#ShellT"><span class="hs-identifier hs-var">ShellT</span></a></span></span><span> </span><span id="local-6989586621679235953"><span class="annot"><a href="#local-6989586621679235953"><span class="hs-identifier hs-type">env</span></a></span></span><span> </span><span id="local-6989586621679235954"><span class="annot"><a href="#local-6989586621679235954"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679235747"><span class="annot"><a href="#local-6989586621679235747"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="MkShellT"><span class="annot"><a href="Shrun.ShellT.html#MkShellT"><span class="hs-identifier hs-var">MkShellT</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/transformers-0.5.6.2/src/Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-type">ReaderT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679235953"><span class="hs-identifier hs-type">env</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679235954"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679235747"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-keyword">deriving</span><span>
+</span><span id="line-32"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-33"></span><span>      </span><span id="local-6989586621679235738"><span id="local-6989586621679235743"><span class="annot"><span class="annottext">(forall a b. (a -&gt; b) -&gt; ShellT env m a -&gt; ShellT env m b)
+-&gt; (forall a b. a -&gt; ShellT env m b -&gt; ShellT env m a)
+-&gt; Functor (ShellT env m)
+forall a b. a -&gt; ShellT env m b -&gt; ShellT env m a
+forall a b. (a -&gt; b) -&gt; ShellT env m a -&gt; ShellT env m b
+forall env (m :: Type -&gt; Type) a b.
+Functor m =&gt;
+a -&gt; ShellT env m b -&gt; ShellT env m a
+forall env (m :: Type -&gt; Type) a b.
+Functor m =&gt;
+(a -&gt; b) -&gt; ShellT env m a -&gt; ShellT env m b
+forall (f :: Type -&gt; Type).
+(forall a b. (a -&gt; b) -&gt; f a -&gt; f b)
+-&gt; (forall a b. a -&gt; f b -&gt; f a) -&gt; Functor f
+&lt;$ :: forall a b. a -&gt; ShellT env m b -&gt; ShellT env m a
+$c&lt;$ :: forall env (m :: Type -&gt; Type) a b.
+Functor m =&gt;
+a -&gt; ShellT env m b -&gt; ShellT env m a
+fmap :: forall a b. (a -&gt; b) -&gt; ShellT env m a -&gt; ShellT env m b
+$cfmap :: forall env (m :: Type -&gt; Type) a b.
+Functor m =&gt;
+(a -&gt; b) -&gt; ShellT env m a -&gt; ShellT env m b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#Functor"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Functor</span></a></span></span></span><span class="hs-special">,</span><span>
+</span><span id="line-34"></span><span>      </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-35"></span><span>      </span><span id="local-6989586621679235711"><span id="local-6989586621679235715"><span id="local-6989586621679235719"><span id="local-6989586621679235723"><span id="local-6989586621679235728"><span class="annot"><span class="annottext">Functor (ShellT env m)
+Functor (ShellT env m)
+-&gt; (forall a. a -&gt; ShellT env m a)
+-&gt; (forall a b.
+    ShellT env m (a -&gt; b) -&gt; ShellT env m a -&gt; ShellT env m b)
+-&gt; (forall a b c.
+    (a -&gt; b -&gt; c)
+    -&gt; ShellT env m a -&gt; ShellT env m b -&gt; ShellT env m c)
+-&gt; (forall a b. ShellT env m a -&gt; ShellT env m b -&gt; ShellT env m b)
+-&gt; (forall a b. ShellT env m a -&gt; ShellT env m b -&gt; ShellT env m a)
+-&gt; Applicative (ShellT env m)
+forall a. a -&gt; ShellT env m a
+forall a b. ShellT env m a -&gt; ShellT env m b -&gt; ShellT env m a
+forall a b. ShellT env m a -&gt; ShellT env m b -&gt; ShellT env m b
+forall a b.
+ShellT env m (a -&gt; b) -&gt; ShellT env m a -&gt; ShellT env m b
+forall a b c.
+(a -&gt; b -&gt; c) -&gt; ShellT env m a -&gt; ShellT env m b -&gt; ShellT env m c
+forall {env} {m :: Type -&gt; Type}.
+Applicative m =&gt;
+Functor (ShellT env m)
+forall env (m :: Type -&gt; Type) a.
+Applicative m =&gt;
+a -&gt; ShellT env m a
+forall env (m :: Type -&gt; Type) a b.
+Applicative m =&gt;
+ShellT env m a -&gt; ShellT env m b -&gt; ShellT env m a
+forall env (m :: Type -&gt; Type) a b.
+Applicative m =&gt;
+ShellT env m a -&gt; ShellT env m b -&gt; ShellT env m b
+forall env (m :: Type -&gt; Type) a b.
+Applicative m =&gt;
+ShellT env m (a -&gt; b) -&gt; ShellT env m a -&gt; ShellT env m b
+forall env (m :: Type -&gt; Type) a b c.
+Applicative m =&gt;
+(a -&gt; b -&gt; c) -&gt; ShellT env m a -&gt; ShellT env m b -&gt; ShellT env m c
+forall (f :: Type -&gt; Type).
+Functor f
+-&gt; (forall a. a -&gt; f a)
+-&gt; (forall a b. f (a -&gt; b) -&gt; f a -&gt; f b)
+-&gt; (forall a b c. (a -&gt; b -&gt; c) -&gt; f a -&gt; f b -&gt; f c)
+-&gt; (forall a b. f a -&gt; f b -&gt; f b)
+-&gt; (forall a b. f a -&gt; f b -&gt; f a)
+-&gt; Applicative f
+&lt;* :: forall a b. ShellT env m a -&gt; ShellT env m b -&gt; ShellT env m a
+$c&lt;* :: forall env (m :: Type -&gt; Type) a b.
+Applicative m =&gt;
+ShellT env m a -&gt; ShellT env m b -&gt; ShellT env m a
+*&gt; :: forall a b. ShellT env m a -&gt; ShellT env m b -&gt; ShellT env m b
+$c*&gt; :: forall env (m :: Type -&gt; Type) a b.
+Applicative m =&gt;
+ShellT env m a -&gt; ShellT env m b -&gt; ShellT env m b
+liftA2 :: forall a b c.
+(a -&gt; b -&gt; c) -&gt; ShellT env m a -&gt; ShellT env m b -&gt; ShellT env m c
+$cliftA2 :: forall env (m :: Type -&gt; Type) a b c.
+Applicative m =&gt;
+(a -&gt; b -&gt; c) -&gt; ShellT env m a -&gt; ShellT env m b -&gt; ShellT env m c
+&lt;*&gt; :: forall a b.
+ShellT env m (a -&gt; b) -&gt; ShellT env m a -&gt; ShellT env m b
+$c&lt;*&gt; :: forall env (m :: Type -&gt; Type) a b.
+Applicative m =&gt;
+ShellT env m (a -&gt; b) -&gt; ShellT env m a -&gt; ShellT env m b
+pure :: forall a. a -&gt; ShellT env m a
+$cpure :: forall env (m :: Type -&gt; Type) a.
+Applicative m =&gt;
+a -&gt; ShellT env m a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#Applicative"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Applicative</span></a></span></span></span></span></span></span><span class="hs-special">,</span><span>
+</span><span id="line-36"></span><span>      </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-37"></span><span>      </span><span id="local-6989586621679235691"><span id="local-6989586621679235695"><span id="local-6989586621679235700"><span class="annot"><span class="annottext">Applicative (ShellT env m)
+Applicative (ShellT env m)
+-&gt; (forall a b.
+    ShellT env m a -&gt; (a -&gt; ShellT env m b) -&gt; ShellT env m b)
+-&gt; (forall a b. ShellT env m a -&gt; ShellT env m b -&gt; ShellT env m b)
+-&gt; (forall a. a -&gt; ShellT env m a)
+-&gt; Monad (ShellT env m)
+forall a. a -&gt; ShellT env m a
+forall a b. ShellT env m a -&gt; ShellT env m b -&gt; ShellT env m b
+forall a b.
+ShellT env m a -&gt; (a -&gt; ShellT env m b) -&gt; ShellT env m b
+forall {env} {m :: Type -&gt; Type}.
+Monad m =&gt;
+Applicative (ShellT env m)
+forall env (m :: Type -&gt; Type) a. Monad m =&gt; a -&gt; ShellT env m a
+forall env (m :: Type -&gt; Type) a b.
+Monad m =&gt;
+ShellT env m a -&gt; ShellT env m b -&gt; ShellT env m b
+forall env (m :: Type -&gt; Type) a b.
+Monad m =&gt;
+ShellT env m a -&gt; (a -&gt; ShellT env m b) -&gt; ShellT env m b
+forall (m :: Type -&gt; Type).
+Applicative m
+-&gt; (forall a b. m a -&gt; (a -&gt; m b) -&gt; m b)
+-&gt; (forall a b. m a -&gt; m b -&gt; m b)
+-&gt; (forall a. a -&gt; m a)
+-&gt; Monad m
+return :: forall a. a -&gt; ShellT env m a
+$creturn :: forall env (m :: Type -&gt; Type) a. Monad m =&gt; a -&gt; ShellT env m a
+&gt;&gt; :: forall a b. ShellT env m a -&gt; ShellT env m b -&gt; ShellT env m b
+$c&gt;&gt; :: forall env (m :: Type -&gt; Type) a b.
+Monad m =&gt;
+ShellT env m a -&gt; ShellT env m b -&gt; ShellT env m b
+&gt;&gt;= :: forall a b.
+ShellT env m a -&gt; (a -&gt; ShellT env m b) -&gt; ShellT env m b
+$c&gt;&gt;= :: forall env (m :: Type -&gt; Type) a b.
+Monad m =&gt;
+ShellT env m a -&gt; (a -&gt; ShellT env m b) -&gt; ShellT env m b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#Monad"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Monad</span></a></span></span></span></span><span class="hs-special">,</span><span>
+</span><span id="line-38"></span><span>      </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-39"></span><span>      </span><span id="local-6989586621679235672"><span id="local-6989586621679235676"><span id="local-6989586621679235681"><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/mtl-2.2.2/src/Control.Monad.Reader.Class.html#MonadReader"><span class="hs-identifier hs-type">MonadReader</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679235953"><span class="hs-identifier hs-type">env</span></a></span></span></span></span><span class="hs-special">,</span><span>
+</span><span id="line-40"></span><span>      </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-41"></span><span>      </span><span id="local-6989586621679235659"><span class="annot"><span class="annottext">MonadThrow (ShellT env m)
+MonadThrow (ShellT env m)
+-&gt; (forall e a.
+    Exception e =&gt;
+    ShellT env m a -&gt; (e -&gt; ShellT env m a) -&gt; ShellT env m a)
+-&gt; MonadCatch (ShellT env m)
+forall e a.
+Exception e =&gt;
+ShellT env m a -&gt; (e -&gt; ShellT env m a) -&gt; ShellT env m a
+forall {env} {m :: Type -&gt; Type}.
+MonadCatch m =&gt;
+MonadThrow (ShellT env m)
+forall env (m :: Type -&gt; Type) e a.
+(MonadCatch m, Exception e) =&gt;
+ShellT env m a -&gt; (e -&gt; ShellT env m a) -&gt; ShellT env m a
+forall (m :: Type -&gt; Type).
+MonadThrow m
+-&gt; (forall e a. Exception e =&gt; m a -&gt; (e -&gt; m a) -&gt; m a)
+-&gt; MonadCatch m
+catch :: forall e a.
+Exception e =&gt;
+ShellT env m a -&gt; (e -&gt; ShellT env m a) -&gt; ShellT env m a
+$ccatch :: forall env (m :: Type -&gt; Type) e a.
+(MonadCatch m, Exception e) =&gt;
+ShellT env m a -&gt; (e -&gt; ShellT env m a) -&gt; ShellT env m a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/exceptions-0.10.4/src/Control.Monad.Catch.html#C%3AMonadCatch"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var">MonadCatch</span></a></span></span><span class="hs-special">,</span><span>
+</span><span id="line-42"></span><span>      </span><span class="hs-comment">-- | @since 0.5</span><span>
+</span><span id="line-43"></span><span>      </span><span id="local-6989586621679235632"><span id="local-6989586621679235636"><span id="local-6989586621679235640"><span id="local-6989586621679235645"><span class="annot"><span class="annottext">Monad (ShellT env m)
+ShellT env m Args
+Monad (ShellT env m)
+-&gt; (FilePath -&gt; ShellT env m FilePath)
+-&gt; (FilePath -&gt; ShellT env m Text)
+-&gt; (FilePath -&gt; ShellT env m Bool)
+-&gt; ShellT env m Args
+-&gt; FileSystemReader (ShellT env m)
+FilePath -&gt; ShellT env m Bool
+FilePath -&gt; ShellT env m FilePath
+FilePath -&gt; ShellT env m Text
+forall {env} {m :: Type -&gt; Type}.
+FileSystemReader m =&gt;
+Monad (ShellT env m)
+forall env (m :: Type -&gt; Type).
+FileSystemReader m =&gt;
+ShellT env m Args
+forall env (m :: Type -&gt; Type).
+FileSystemReader m =&gt;
+FilePath -&gt; ShellT env m Bool
+forall env (m :: Type -&gt; Type).
+FileSystemReader m =&gt;
+FilePath -&gt; ShellT env m FilePath
+forall env (m :: Type -&gt; Type).
+FileSystemReader m =&gt;
+FilePath -&gt; ShellT env m Text
+forall (m :: Type -&gt; Type).
+Monad m
+-&gt; (FilePath -&gt; m FilePath)
+-&gt; (FilePath -&gt; m Text)
+-&gt; (FilePath -&gt; m Bool)
+-&gt; m Args
+-&gt; FileSystemReader m
+getArgs :: ShellT env m Args
+$cgetArgs :: forall env (m :: Type -&gt; Type).
+FileSystemReader m =&gt;
+ShellT env m Args
+doesFileExist :: FilePath -&gt; ShellT env m Bool
+$cdoesFileExist :: forall env (m :: Type -&gt; Type).
+FileSystemReader m =&gt;
+FilePath -&gt; ShellT env m Bool
+readFile :: FilePath -&gt; ShellT env m Text
+$creadFile :: forall env (m :: Type -&gt; Type).
+FileSystemReader m =&gt;
+FilePath -&gt; ShellT env m Text
+getXdgConfig :: FilePath -&gt; ShellT env m FilePath
+$cgetXdgConfig :: forall env (m :: Type -&gt; Type).
+FileSystemReader m =&gt;
+FilePath -&gt; ShellT env m FilePath
+</span><a href="Shrun.Effects.FileSystemReader.html#C%3AFileSystemReader"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">FileSystemReader</span></a></span></span></span></span></span><span class="hs-special">,</span><span>
+</span><span id="line-44"></span><span>      </span><span class="hs-comment">-- | @since 0.5</span><span>
+</span><span id="line-45"></span><span>      </span><span id="local-6989586621679235621"><span class="annot"><span class="annottext">Monad (ShellT env m)
+Monad (ShellT env m)
+-&gt; (FilePath -&gt; Text -&gt; ShellT env m ())
+-&gt; FileSystemWriter (ShellT env m)
+FilePath -&gt; Text -&gt; ShellT env m ()
+forall {env} {m :: Type -&gt; Type}.
+FileSystemWriter m =&gt;
+Monad (ShellT env m)
+forall env (m :: Type -&gt; Type).
+FileSystemWriter m =&gt;
+FilePath -&gt; Text -&gt; ShellT env m ()
+forall (m :: Type -&gt; Type).
+Monad m -&gt; (FilePath -&gt; Text -&gt; m ()) -&gt; FileSystemWriter m
+appendFile :: FilePath -&gt; Text -&gt; ShellT env m ()
+$cappendFile :: forall env (m :: Type -&gt; Type).
+FileSystemWriter m =&gt;
+FilePath -&gt; Text -&gt; ShellT env m ()
+</span><a href="Shrun.Effects.FileSystemWriter.html#C%3AFileSystemWriter"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var">FileSystemWriter</span></a></span></span><span class="hs-special">,</span><span>
+</span><span id="line-46"></span><span>      </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-47"></span><span>      </span><span id="local-6989586621679235609"><span class="annot"><span class="annottext">Monad (ShellT env m)
+Monad (ShellT env m)
+-&gt; (forall a. IO a -&gt; ShellT env m a) -&gt; MonadIO (ShellT env m)
+forall a. IO a -&gt; ShellT env m a
+forall {env} {m :: Type -&gt; Type}. MonadIO m =&gt; Monad (ShellT env m)
+forall env (m :: Type -&gt; Type) a.
+MonadIO m =&gt;
+IO a -&gt; ShellT env m a
+forall (m :: Type -&gt; Type).
+Monad m -&gt; (forall a. IO a -&gt; m a) -&gt; MonadIO m
+liftIO :: forall a. IO a -&gt; ShellT env m a
+$cliftIO :: forall env (m :: Type -&gt; Type) a.
+MonadIO m =&gt;
+IO a -&gt; ShellT env m a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/Control.Monad.IO.Class.html#C%3AMonadIO"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var">MonadIO</span></a></span></span><span class="hs-special">,</span><span>
+</span><span id="line-48"></span><span>      </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-49"></span><span>      </span><span id="local-6989586621679235588"><span id="local-6989586621679235592"><span id="local-6989586621679235597"><span class="annot"><span class="annottext">MonadCatch (ShellT env m)
+MonadCatch (ShellT env m)
+-&gt; (forall b.
+    ((forall a. ShellT env m a -&gt; ShellT env m a) -&gt; ShellT env m b)
+    -&gt; ShellT env m b)
+-&gt; (forall b.
+    ((forall a. ShellT env m a -&gt; ShellT env m a) -&gt; ShellT env m b)
+    -&gt; ShellT env m b)
+-&gt; (forall a b c.
+    ShellT env m a
+    -&gt; (a -&gt; ExitCase b -&gt; ShellT env m c)
+    -&gt; (a -&gt; ShellT env m b)
+    -&gt; ShellT env m (b, c))
+-&gt; MonadMask (ShellT env m)
+forall b.
+((forall a. ShellT env m a -&gt; ShellT env m a) -&gt; ShellT env m b)
+-&gt; ShellT env m b
+forall a b c.
+ShellT env m a
+-&gt; (a -&gt; ExitCase b -&gt; ShellT env m c)
+-&gt; (a -&gt; ShellT env m b)
+-&gt; ShellT env m (b, c)
+forall {env} {m :: Type -&gt; Type}.
+MonadMask m =&gt;
+MonadCatch (ShellT env m)
+forall env (m :: Type -&gt; Type) b.
+MonadMask m =&gt;
+((forall a. ShellT env m a -&gt; ShellT env m a) -&gt; ShellT env m b)
+-&gt; ShellT env m b
+forall env (m :: Type -&gt; Type) a b c.
+MonadMask m =&gt;
+ShellT env m a
+-&gt; (a -&gt; ExitCase b -&gt; ShellT env m c)
+-&gt; (a -&gt; ShellT env m b)
+-&gt; ShellT env m (b, c)
+forall (m :: Type -&gt; Type).
+MonadCatch m
+-&gt; (forall b. ((forall a. m a -&gt; m a) -&gt; m b) -&gt; m b)
+-&gt; (forall b. ((forall a. m a -&gt; m a) -&gt; m b) -&gt; m b)
+-&gt; (forall a b c.
+    m a -&gt; (a -&gt; ExitCase b -&gt; m c) -&gt; (a -&gt; m b) -&gt; m (b, c))
+-&gt; MonadMask m
+generalBracket :: forall a b c.
+ShellT env m a
+-&gt; (a -&gt; ExitCase b -&gt; ShellT env m c)
+-&gt; (a -&gt; ShellT env m b)
+-&gt; ShellT env m (b, c)
+$cgeneralBracket :: forall env (m :: Type -&gt; Type) a b c.
+MonadMask m =&gt;
+ShellT env m a
+-&gt; (a -&gt; ExitCase b -&gt; ShellT env m c)
+-&gt; (a -&gt; ShellT env m b)
+-&gt; ShellT env m (b, c)
+uninterruptibleMask :: forall b.
+((forall a. ShellT env m a -&gt; ShellT env m a) -&gt; ShellT env m b)
+-&gt; ShellT env m b
+$cuninterruptibleMask :: forall env (m :: Type -&gt; Type) b.
+MonadMask m =&gt;
+((forall a. ShellT env m a -&gt; ShellT env m a) -&gt; ShellT env m b)
+-&gt; ShellT env m b
+mask :: forall b.
+((forall a. ShellT env m a -&gt; ShellT env m a) -&gt; ShellT env m b)
+-&gt; ShellT env m b
+$cmask :: forall env (m :: Type -&gt; Type) b.
+MonadMask m =&gt;
+((forall a. ShellT env m a -&gt; ShellT env m a) -&gt; ShellT env m b)
+-&gt; ShellT env m b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/exceptions-0.10.4/src/Control.Monad.Catch.html#C%3AMonadMask"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">MonadMask</span></a></span></span></span></span><span class="hs-special">,</span><span>
+</span><span id="line-50"></span><span>      </span><span class="hs-comment">-- | @since 0.5</span><span>
+</span><span id="line-51"></span><span>      </span><span id="local-6989586621679235556"><span id="local-6989586621679235560"><span id="local-6989586621679235564"><span id="local-6989586621679235568"><span id="local-6989586621679235572"><span id="local-6989586621679235577"><span class="annot"><span class="annottext">Monad (ShellT env m)
+Monad (ShellT env m)
+-&gt; (forall a. STM a -&gt; ShellT env m a)
+-&gt; (forall a. a -&gt; ShellT env m (IORef a))
+-&gt; (forall a. IORef a -&gt; ShellT env m a)
+-&gt; (forall a. IORef a -&gt; (a -&gt; a) -&gt; ShellT env m ())
+-&gt; (forall a. a -&gt; ShellT env m (TVar a))
+-&gt; (forall a. TVar a -&gt; ShellT env m a)
+-&gt; Mutable (ShellT env m)
+forall a. a -&gt; ShellT env m (TVar a)
+forall a. a -&gt; ShellT env m (IORef a)
+forall a. TVar a -&gt; ShellT env m a
+forall a. STM a -&gt; ShellT env m a
+forall a. IORef a -&gt; ShellT env m a
+forall a. IORef a -&gt; (a -&gt; a) -&gt; ShellT env m ()
+forall {env} {m :: Type -&gt; Type}. Mutable m =&gt; Monad (ShellT env m)
+forall env (m :: Type -&gt; Type) a.
+Mutable m =&gt;
+a -&gt; ShellT env m (TVar a)
+forall env (m :: Type -&gt; Type) a.
+Mutable m =&gt;
+a -&gt; ShellT env m (IORef a)
+forall env (m :: Type -&gt; Type) a.
+Mutable m =&gt;
+TVar a -&gt; ShellT env m a
+forall env (m :: Type -&gt; Type) a.
+Mutable m =&gt;
+STM a -&gt; ShellT env m a
+forall env (m :: Type -&gt; Type) a.
+Mutable m =&gt;
+IORef a -&gt; ShellT env m a
+forall env (m :: Type -&gt; Type) a.
+Mutable m =&gt;
+IORef a -&gt; (a -&gt; a) -&gt; ShellT env m ()
+forall (m :: Type -&gt; Type).
+Monad m
+-&gt; (forall a. STM a -&gt; m a)
+-&gt; (forall a. a -&gt; m (IORef a))
+-&gt; (forall a. IORef a -&gt; m a)
+-&gt; (forall a. IORef a -&gt; (a -&gt; a) -&gt; m ())
+-&gt; (forall a. a -&gt; m (TVar a))
+-&gt; (forall a. TVar a -&gt; m a)
+-&gt; Mutable m
+readTVarIO :: forall a. TVar a -&gt; ShellT env m a
+$creadTVarIO :: forall env (m :: Type -&gt; Type) a.
+Mutable m =&gt;
+TVar a -&gt; ShellT env m a
+newTVarIO :: forall a. a -&gt; ShellT env m (TVar a)
+$cnewTVarIO :: forall env (m :: Type -&gt; Type) a.
+Mutable m =&gt;
+a -&gt; ShellT env m (TVar a)
+modifyIORef' :: forall a. IORef a -&gt; (a -&gt; a) -&gt; ShellT env m ()
+$cmodifyIORef' :: forall env (m :: Type -&gt; Type) a.
+Mutable m =&gt;
+IORef a -&gt; (a -&gt; a) -&gt; ShellT env m ()
+readIORef :: forall a. IORef a -&gt; ShellT env m a
+$creadIORef :: forall env (m :: Type -&gt; Type) a.
+Mutable m =&gt;
+IORef a -&gt; ShellT env m a
+newIORef :: forall a. a -&gt; ShellT env m (IORef a)
+$cnewIORef :: forall env (m :: Type -&gt; Type) a.
+Mutable m =&gt;
+a -&gt; ShellT env m (IORef a)
+liftSTM :: forall a. STM a -&gt; ShellT env m a
+$cliftSTM :: forall env (m :: Type -&gt; Type) a.
+Mutable m =&gt;
+STM a -&gt; ShellT env m a
+</span><a href="Shrun.Effects.Mutable.html#C%3AMutable"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Mutable</span></a></span></span></span></span></span></span></span><span class="hs-special">,</span><span>
+</span><span id="line-52"></span><span>      </span><span class="hs-comment">-- | @since 0.5</span><span>
+</span><span id="line-53"></span><span>      </span><span id="local-6989586621679235536"><span id="local-6989586621679235540"><span id="local-6989586621679235545"><span class="annot"><span class="annottext">Monad (ShellT env m)
+ShellT env m Natural
+Monad (ShellT env m)
+-&gt; (Text -&gt; ShellT env m ())
+-&gt; ShellT env m Natural
+-&gt; (Int -&gt; ShellT env m ())
+-&gt; Terminal (ShellT env m)
+Int -&gt; ShellT env m ()
+Text -&gt; ShellT env m ()
+forall {env} {m :: Type -&gt; Type}.
+Terminal m =&gt;
+Monad (ShellT env m)
+forall env (m :: Type -&gt; Type). Terminal m =&gt; ShellT env m Natural
+forall env (m :: Type -&gt; Type).
+Terminal m =&gt;
+Int -&gt; ShellT env m ()
+forall env (m :: Type -&gt; Type).
+Terminal m =&gt;
+Text -&gt; ShellT env m ()
+forall (m :: Type -&gt; Type).
+Monad m
+-&gt; (Text -&gt; m ()) -&gt; m Natural -&gt; (Int -&gt; m ()) -&gt; Terminal m
+sleep :: Int -&gt; ShellT env m ()
+$csleep :: forall env (m :: Type -&gt; Type).
+Terminal m =&gt;
+Int -&gt; ShellT env m ()
+getTerminalWidth :: ShellT env m Natural
+$cgetTerminalWidth :: forall env (m :: Type -&gt; Type). Terminal m =&gt; ShellT env m Natural
+putTextLn :: Text -&gt; ShellT env m ()
+$cputTextLn :: forall env (m :: Type -&gt; Type).
+Terminal m =&gt;
+Text -&gt; ShellT env m ()
+</span><a href="Shrun.Effects.Terminal.html#C%3ATerminal"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Terminal</span></a></span></span></span></span><span class="hs-special">,</span><span>
+</span><span id="line-54"></span><span>      </span><span class="hs-comment">-- | @since 0.5</span><span>
+</span><span id="line-55"></span><span>      </span><span id="local-6989586621679235520"><span id="local-6989586621679235525"><span class="annot"><span class="annottext">Monad (ShellT env m)
+ShellT env m TimeSpec
+ShellT env m ZonedTime
+Monad (ShellT env m)
+-&gt; ShellT env m ZonedTime
+-&gt; ShellT env m TimeSpec
+-&gt; Timing (ShellT env m)
+forall {env} {m :: Type -&gt; Type}. Timing m =&gt; Monad (ShellT env m)
+forall env (m :: Type -&gt; Type). Timing m =&gt; ShellT env m TimeSpec
+forall env (m :: Type -&gt; Type). Timing m =&gt; ShellT env m ZonedTime
+forall (m :: Type -&gt; Type).
+Monad m -&gt; m ZonedTime -&gt; m TimeSpec -&gt; Timing m
+getTimeSpec :: ShellT env m TimeSpec
+$cgetTimeSpec :: forall env (m :: Type -&gt; Type). Timing m =&gt; ShellT env m TimeSpec
+getSystemTime :: ShellT env m ZonedTime
+$cgetSystemTime :: forall env (m :: Type -&gt; Type). Timing m =&gt; ShellT env m ZonedTime
+</span><a href="Shrun.Effects.Timing.html#C%3ATiming"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Timing</span></a></span></span></span><span class="hs-special">,</span><span>
+</span><span id="line-56"></span><span>      </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-57"></span><span>      </span><span id="local-6989586621679235507"><span class="annot"><span class="annottext">Monad (ShellT env m)
+Monad (ShellT env m)
+-&gt; (forall e a. Exception e =&gt; e -&gt; ShellT env m a)
+-&gt; MonadThrow (ShellT env m)
+forall e a. Exception e =&gt; e -&gt; ShellT env m a
+forall {env} {m :: Type -&gt; Type}.
+MonadThrow m =&gt;
+Monad (ShellT env m)
+forall env (m :: Type -&gt; Type) e a.
+(MonadThrow m, Exception e) =&gt;
+e -&gt; ShellT env m a
+forall (m :: Type -&gt; Type).
+Monad m -&gt; (forall e a. Exception e =&gt; e -&gt; m a) -&gt; MonadThrow m
+throwM :: forall e a. Exception e =&gt; e -&gt; ShellT env m a
+$cthrowM :: forall env (m :: Type -&gt; Type) e a.
+(MonadThrow m, Exception e) =&gt;
+e -&gt; ShellT env m a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/exceptions-0.10.4/src/Control.Monad.Catch.html#C%3AMonadThrow"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var">MonadThrow</span></a></span></span><span class="hs-special">,</span><span>
+</span><span id="line-58"></span><span>      </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-59"></span><span>      </span><span id="local-6989586621679235494"><span class="annot"><span class="annottext">MonadIO (ShellT env m)
+MonadIO (ShellT env m)
+-&gt; (forall b.
+    ((forall a. ShellT env m a -&gt; IO a) -&gt; IO b) -&gt; ShellT env m b)
+-&gt; MonadUnliftIO (ShellT env m)
+forall b.
+((forall a. ShellT env m a -&gt; IO a) -&gt; IO b) -&gt; ShellT env m b
+forall {env} {m :: Type -&gt; Type}.
+MonadUnliftIO m =&gt;
+MonadIO (ShellT env m)
+forall env (m :: Type -&gt; Type) b.
+MonadUnliftIO m =&gt;
+((forall a. ShellT env m a -&gt; IO a) -&gt; IO b) -&gt; ShellT env m b
+forall (m :: Type -&gt; Type).
+MonadIO m
+-&gt; (forall b. ((forall a. m a -&gt; IO a) -&gt; IO b) -&gt; m b)
+-&gt; MonadUnliftIO m
+withRunInIO :: forall b.
+((forall a. ShellT env m a -&gt; IO a) -&gt; IO b) -&gt; ShellT env m b
+$cwithRunInIO :: forall env (m :: Type -&gt; Type) b.
+MonadUnliftIO m =&gt;
+((forall a. ShellT env m a -&gt; IO a) -&gt; IO b) -&gt; ShellT env m b
+</span><a href="file:///nix/store/p8b5cbpfr31pnvmabzwhadjsm8ipdxar-unliftio-core-0.2.0.1-doc/share/doc/unliftio-core-0.2.0.1/html/src/Control.Monad.IO.Unlift.html#C%3AMonadUnliftIO"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var">MonadUnliftIO</span></a></span></span><span>
+</span><span id="line-60"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-61"></span><span>    </span><span class="hs-keyword">via</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/transformers-0.5.6.2/src/Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-type">ReaderT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679235953"><span class="hs-identifier hs-type">env</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679235954"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span class="hs-comment">-- | Runs a 'ShellT' with the given @env@.</span><span>
+</span><span id="line-64"></span><span class="hs-comment">--</span><span>
+</span><span id="line-65"></span><span class="hs-comment">-- @since 0.1</span><span>
+</span><span id="line-66"></span><span id="local-6989586621679235792"><span id="local-6989586621679235793"><span id="local-6989586621679235794"><span class="annot"><a href="Shrun.ShellT.html#runShellT"><span class="hs-identifier hs-type">runShellT</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Shrun.ShellT.html#ShellT"><span class="hs-identifier hs-type">ShellT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679235794"><span class="hs-identifier hs-type">env</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679235793"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679235792"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679235794"><span class="hs-identifier hs-type">env</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679235793"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679235792"><span class="hs-identifier hs-type">a</span></a></span></span></span></span><span>
+</span><span id="line-67"></span><span id="runShellT"><span class="annot"><span class="annottext">runShellT :: forall env (m :: Type -&gt; Type) a. ShellT env m a -&gt; env -&gt; m a
+</span><a href="Shrun.ShellT.html#runShellT"><span class="hs-identifier hs-var hs-var">runShellT</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Shrun.ShellT.html#MkShellT"><span class="hs-identifier hs-type">MkShellT</span></a></span><span> </span><span id="local-6989586621679235487"><span class="annot"><span class="annottext">ReaderT env m a
+</span><a href="#local-6989586621679235487"><span class="hs-identifier hs-var">rdr</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ReaderT env m a -&gt; env -&gt; m a
+forall r (m :: Type -&gt; Type) a. ReaderT r m a -&gt; r -&gt; m a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/transformers-0.5.6.2/src/Control.Monad.Trans.Reader.html#runReaderT"><span class="hs-identifier hs-var">runReaderT</span></a></span><span> </span><span class="annot"><span class="annottext">ReaderT env m a
+</span><a href="#local-6989586621679235487"><span class="hs-identifier hs-var">rdr</span></a></span><span>
+</span><span id="line-68"></span><span class="hs-pragma">{-# INLINEABLE</span><span> </span><span class="annot"><a href="Shrun.ShellT.html#runShellT"><span class="hs-pragma hs-type">runShellT</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span class="hs-comment">-- Concrete Env here so we can vary our logging logic with other envs</span><span>
+</span><span id="line-71"></span><span class="hs-comment">-- (i.e. in tests).</span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-74"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679235777"><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679235777"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/exceptions-0.10.4/src/Control.Monad.Catch.html#MonadMask"><span class="hs-identifier hs-type">MonadMask</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679235777"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Shrun.Effects.Terminal.html#Terminal"><span class="hs-identifier hs-type">Terminal</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679235777"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Shrun.Logging.RegionLogger.html#RegionLogger"><span class="hs-identifier hs-type">RegionLogger</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Shrun.ShellT.html#ShellT"><span class="hs-identifier hs-type">ShellT</span></a></span><span> </span><span class="annot"><a href="Shrun.Configuration.Env.Types.html#Env"><span class="hs-identifier hs-type">Env</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679235777"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-75"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="Region"><span class="annot"><a href="Shrun.Logging.RegionLogger.html#Region"><span class="hs-identifier hs-var">Region</span></a></span></span><span> </span><span id="local-6989586621679235777"><span class="hs-special">(</span><span class="annot"><a href="Shrun.ShellT.html#ShellT"><span class="hs-identifier hs-type">ShellT</span></a></span><span> </span><span class="annot"><a href="Shrun.Configuration.Env.Types.html#Env"><span class="hs-identifier hs-type">Env</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679235777"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/5pfzhq3bq71djxihr3a31i6bkhzab9dr-concurrent-output-1.10.16-doc/share/doc/concurrent-output-1.10.16/html/src/System.Console.Regions.html#ConsoleRegion"><span class="hs-identifier hs-type">ConsoleRegion</span></a></span><span>
+</span><span id="line-76"></span><span>
+</span><span id="line-77"></span><span>  </span><span id="local-6989586621679235473"><span class="annot"><span class="annottext">logFn :: Text -&gt; ShellT Env m ()
+</span><a href="Shrun.Logging.RegionLogger.html#logFn"><span class="hs-identifier hs-var hs-var hs-var hs-var">logFn</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; ShellT Env m ()
+forall (m :: Type -&gt; Type). Terminal m =&gt; Text -&gt; m ()
+</span><a href="Shrun.Effects.Terminal.html#putTextLn"><span class="hs-identifier hs-var">putTextLn</span></a></span><span>
+</span><span id="line-78"></span><span>
+</span><span id="line-79"></span><span>  </span><span id="local-6989586621679235458"><span class="annot"><span class="annottext">logModeToRegionFn :: LogMode -&gt; Region (ShellT Env m) -&gt; Text -&gt; ShellT Env m ()
+</span><a href="Shrun.Logging.RegionLogger.html#logModeToRegionFn"><span class="hs-identifier hs-var hs-var hs-var hs-var">logModeToRegionFn</span></a></span></span><span> </span><span class="annot"><span class="annottext">LogMode
+</span><a href="Shrun.Logging.Types.html#Set"><span class="hs-identifier hs-var">Set</span></a></span><span> </span><span id="local-6989586621679235455"><span class="annot"><span class="annottext">Region (ShellT Env m)
+</span><a href="#local-6989586621679235455"><span class="hs-identifier hs-var">cr</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO () -&gt; ShellT Env m ()
+forall (m :: Type -&gt; Type) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; ShellT Env m ())
+-&gt; (Text -&gt; IO ()) -&gt; Text -&gt; ShellT Env m ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ConsoleRegion -&gt; Text -&gt; IO ()
+forall v (m :: Type -&gt; Type).
+(ToRegionContent v, LiftRegion m) =&gt;
+ConsoleRegion -&gt; v -&gt; m ()
+</span><a href="file:///nix/store/5pfzhq3bq71djxihr3a31i6bkhzab9dr-concurrent-output-1.10.16-doc/share/doc/concurrent-output-1.10.16/html/src/System.Console.Regions.html#setConsoleRegion"><span class="hs-identifier hs-var">Regions.setConsoleRegion</span></a></span><span> </span><span class="annot"><span class="annottext">ConsoleRegion
+Region (ShellT Env m)
+</span><a href="#local-6989586621679235455"><span class="hs-identifier hs-var">cr</span></a></span><span>
+</span><span id="line-80"></span><span>  </span><span class="annot"><a href="Shrun.Logging.RegionLogger.html#logModeToRegionFn"><span class="hs-identifier hs-var">logModeToRegionFn</span></a></span><span> </span><span class="annot"><span class="annottext">LogMode
+</span><a href="Shrun.Logging.Types.html#Append"><span class="hs-identifier hs-var">Append</span></a></span><span> </span><span id="local-6989586621679235450"><span class="annot"><span class="annottext">Region (ShellT Env m)
+</span><a href="#local-6989586621679235450"><span class="hs-identifier hs-var">cr</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO () -&gt; ShellT Env m ()
+forall (m :: Type -&gt; Type) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; ShellT Env m ())
+-&gt; (Text -&gt; IO ()) -&gt; Text -&gt; ShellT Env m ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ConsoleRegion -&gt; Text -&gt; IO ()
+forall v (m :: Type -&gt; Type).
+(Outputable v, LiftRegion m) =&gt;
+ConsoleRegion -&gt; v -&gt; m ()
+</span><a href="file:///nix/store/5pfzhq3bq71djxihr3a31i6bkhzab9dr-concurrent-output-1.10.16-doc/share/doc/concurrent-output-1.10.16/html/src/System.Console.Regions.html#appendConsoleRegion"><span class="hs-identifier hs-var">Regions.appendConsoleRegion</span></a></span><span> </span><span class="annot"><span class="annottext">ConsoleRegion
+Region (ShellT Env m)
+</span><a href="#local-6989586621679235450"><span class="hs-identifier hs-var">cr</span></a></span><span>
+</span><span id="line-81"></span><span>  </span><span class="annot"><a href="Shrun.Logging.RegionLogger.html#logModeToRegionFn"><span class="hs-identifier hs-var">logModeToRegionFn</span></a></span><span> </span><span class="annot"><span class="annottext">LogMode
+</span><a href="Shrun.Logging.Types.html#Finish"><span class="hs-identifier hs-var">Finish</span></a></span><span> </span><span id="local-6989586621679235447"><span class="annot"><span class="annottext">Region (ShellT Env m)
+</span><a href="#local-6989586621679235447"><span class="hs-identifier hs-var">cr</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO () -&gt; ShellT Env m ()
+forall (m :: Type -&gt; Type) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; ShellT Env m ())
+-&gt; (Text -&gt; IO ()) -&gt; Text -&gt; ShellT Env m ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ConsoleRegion -&gt; Text -&gt; IO ()
+forall v (m :: Type -&gt; Type).
+(Outputable v, LiftRegion m) =&gt;
+ConsoleRegion -&gt; v -&gt; m ()
+</span><a href="file:///nix/store/5pfzhq3bq71djxihr3a31i6bkhzab9dr-concurrent-output-1.10.16-doc/share/doc/concurrent-output-1.10.16/html/src/System.Console.Regions.html#finishConsoleRegion"><span class="hs-identifier hs-var">Regions.finishConsoleRegion</span></a></span><span> </span><span class="annot"><span class="annottext">ConsoleRegion
+Region (ShellT Env m)
+</span><a href="#local-6989586621679235447"><span class="hs-identifier hs-var">cr</span></a></span><span>
+</span><span id="line-82"></span><span>
+</span><span id="line-83"></span><span>  </span><span id="local-6989586621679235443"><span class="annot"><span class="annottext">withConsoleRegion :: forall a.
+RegionLayout
+-&gt; (Region (ShellT Env m) -&gt; ShellT Env m a) -&gt; ShellT Env m a
+</span><a href="Shrun.Logging.RegionLogger.html#withConsoleRegion"><span class="hs-identifier hs-var hs-var hs-var hs-var">withConsoleRegion</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">RegionLayout
+-&gt; (Region (ShellT Env m) -&gt; ShellT Env m a) -&gt; ShellT Env m a
+forall (m :: Type -&gt; Type) a.
+(MonadIO m, MonadMask m) =&gt;
+RegionLayout -&gt; (ConsoleRegion -&gt; m a) -&gt; m a
+</span><a href="file:///nix/store/5pfzhq3bq71djxihr3a31i6bkhzab9dr-concurrent-output-1.10.16-doc/share/doc/concurrent-output-1.10.16/html/src/System.Console.Regions.html#withConsoleRegion"><span class="hs-identifier hs-var">Regions.withConsoleRegion</span></a></span><span>
+</span><span id="line-84"></span><span>
+</span><span id="line-85"></span><span class="hs-comment">-- | @since 0.3.0.1</span><span>
+</span><span id="line-86"></span><span class="hs-keyword">instance</span><span>
+</span><span id="line-87"></span><span>  </span><span id="local-6989586621679235757"><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/exceptions-0.10.4/src/Control.Monad.Catch.html#MonadMask"><span class="hs-identifier hs-type">MonadMask</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679235757"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/p8b5cbpfr31pnvmabzwhadjsm8ipdxar-unliftio-core-0.2.0.1-doc/share/doc/unliftio-core-0.2.0.1/html/src/Control.Monad.IO.Unlift.html#MonadUnliftIO"><span class="hs-identifier hs-type">MonadUnliftIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679235757"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Shrun.Effects.Mutable.html#Mutable"><span class="hs-identifier hs-type">Mutable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679235757"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Shrun.Effects.Terminal.html#Terminal"><span class="hs-identifier hs-type">Terminal</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679235757"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Shrun.Effects.Timing.html#Timing"><span class="hs-identifier hs-type">Timing</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679235757"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-88"></span><span>  </span><span class="annot"><a href="Shrun.Effects.Process.html#Process"><span class="hs-identifier hs-type">Process</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Shrun.ShellT.html#ShellT"><span class="hs-identifier hs-type">ShellT</span></a></span><span> </span><span class="annot"><a href="Shrun.Configuration.Env.Types.html#Env"><span class="hs-identifier hs-type">Env</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679235757"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-89"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-90"></span><span>  </span><span id="local-6989586621679235415"><span class="annot"><span class="annottext">tryCmd :: Command -&gt; ShellT Env m (Maybe Stderr)
+</span><a href="Shrun.Effects.Process.html#tryCmd"><span class="hs-identifier hs-var hs-var hs-var hs-var">tryCmd</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Command -&gt; ShellT Env m (Maybe Stderr)
+forall env (m :: Type -&gt; Type).
+(HasCompletedCmds env, MonadIO m, MonadReader env m) =&gt;
+Command -&gt; m (Maybe Stderr)
+</span><a href="Shrun.IO.html#tryCommand"><span class="hs-identifier hs-var">ShIO.tryCommand</span></a></span><span>
+</span><span id="line-91"></span><span>  </span><span id="local-6989586621679235402"><span class="annot"><span class="annottext">tryCmdStream :: Command -&gt; ShellT Env m (Maybe Stderr)
+</span><a href="Shrun.Effects.Process.html#tryCmdStream"><span class="hs-identifier hs-var hs-var hs-var hs-var">tryCmdStream</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Command -&gt; ShellT Env m (Maybe Stderr)
+forall env (m :: Type -&gt; Type).
+(HasCompletedCmds env, HasLogging env, MonadReader env m,
+ Mutable m, MonadUnliftIO m, RegionLogger m,
+ Region m ~ ConsoleRegion, Timing m) =&gt;
+Command -&gt; m (Maybe Stderr)
+</span><a href="Shrun.IO.html#tryCommandStreamNoRegion"><span class="hs-identifier hs-var">ShIO.tryCommandStreamNoRegion</span></a></span><span>
+</span><span id="line-92"></span><span>  </span><span id="local-6989586621679235389"><span class="annot"><span class="annottext">tryCmdStreamRegion :: Command -&gt; ShellT Env m (Maybe Stderr)
+</span><a href="Shrun.Effects.Process.html#tryCmdStreamRegion"><span class="hs-identifier hs-var hs-var hs-var hs-var">tryCmdStreamRegion</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Command -&gt; ShellT Env m (Maybe Stderr)
+forall env (m :: Type -&gt; Type).
+(HasCompletedCmds env, HasLogging env, MonadMask m,
+ MonadReader env m, Mutable m, MonadUnliftIO m, RegionLogger m,
+ Region m ~ ConsoleRegion, Timing m) =&gt;
+Command -&gt; m (Maybe Stderr)
+</span><a href="Shrun.IO.html#tryCommandStreamRegion"><span class="hs-identifier hs-var">ShIO.tryCommandStreamRegion</span></a></span><span>
+</span><span id="line-93"></span></pre></body></html>

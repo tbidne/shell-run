@@ -1,0 +1,255 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- | Provides the 'LogTextQueue' type and associated functions. This is intended</span><span>
+</span><span id="line-4"></span><span class="hs-comment">-- for concurrently writing logs to a file.</span><span>
+</span><span id="line-5"></span><span class="hs-comment">--</span><span>
+</span><span id="line-6"></span><span class="hs-comment">-- @since 0.1</span><span>
+</span><span id="line-7"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Shrun.Logging.Queue</span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-comment">-- * LogText</span></span><span>
+</span><span id="line-9"></span><span>    </span><span class="annot"><a href="Shrun.Logging.Types.html#LogText"><span class="hs-identifier">LogText</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Shrun.Logging.Types.html#MkLogText"><span class="hs-identifier">MkLogText</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>    </span><span class="annot"><a href="Shrun.Logging.Types.html#_MkLogText"><span class="hs-identifier">_MkLogText</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>    </span><span class="annot"><a href="Shrun.Logging.Queue.html#formatFileLog"><span class="hs-identifier">formatFileLog</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Queue</span></span><span>
+</span><span id="line-14"></span><span>    </span><span class="annot"><a href="Shrun.Logging.Types.html#LogTextQueue"><span class="hs-identifier">LogTextQueue</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>    </span><span class="annot"><a href="Shrun.Logging.Types.html#_MkLogTextQueue"><span class="hs-identifier">_MkLogTextQueue</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>    </span><span class="annot"><a href="Shrun.Logging.Queue.html#readQueue"><span class="hs-identifier">readQueue</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>    </span><span class="annot"><a href="Shrun.Logging.Queue.html#writeQueue"><span class="hs-identifier">writeQueue</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>    </span><span class="annot"><a href="Shrun.Logging.Queue.html#flushQueue"><span class="hs-identifier">flushQueue</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Shrun.Configuration.Env.Types.html"><span class="hs-identifier">Shrun.Configuration.Env.Types</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Shrun.Configuration.Env.Types.html#HasLogging"><span class="hs-identifier">HasLogging</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Shrun.Effects.Mutable.html"><span class="hs-identifier">Shrun.Effects.Mutable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Shrun.Effects.Mutable.html#Mutable"><span class="hs-identifier">Mutable</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Shrun.Effects.Timing.html"><span class="hs-identifier">Shrun.Effects.Timing</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Shrun.Effects.Timing.html#Timing"><span class="hs-identifier">Timing</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Shrun.Logging.Formatting.html"><span class="hs-identifier">Shrun.Logging.Formatting</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Shrun.Logging.Formatting.html#stripChars%27"><span class="hs-identifier">stripChars'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Shrun.Logging.Types.html"><span class="hs-identifier">Shrun.Logging.Types</span></a></span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Shrun.Logging.Types.html#Log"><span class="hs-identifier">Log</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>    </span><span class="annot"><a href="Shrun.Logging.Types.html#LogText"><span class="hs-identifier">LogText</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>    </span><span class="annot"><a href="Shrun.Logging.Types.html#LogTextQueue"><span class="hs-identifier">LogTextQueue</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span>    </span><span class="annot"><a href="Shrun.Logging.Types.html#_MkLogText"><span class="hs-identifier">_MkLogText</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span>    </span><span class="annot"><a href="Shrun.Logging.Types.html#_MkLogTextQueue"><span class="hs-identifier">_MkLogTextQueue</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Shrun.Logging.Types.html"><span class="hs-identifier">Shrun.Logging.Types</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Log</span></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Shrun.Prelude.html"><span class="hs-identifier">Shrun.Prelude</span></a></span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span class="hs-comment">-- | @since 0.5</span><span>
+</span><span id="line-37"></span><span class="annot"><a href="Shrun.Logging.Queue.html#_LogText"><span class="hs-identifier hs-type">_LogText</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/wnx39jjxjr7ivk5xmark8v1f1fl8cmvb-optics-core-0.4.1-doc/share/doc/optics-core-0.4.1/html/src/Optics.Getter.html#Getter"><span class="hs-identifier hs-type">Getter</span></a></span><span> </span><span class="annot"><a href="Shrun.Logging.Types.html#LogText"><span class="hs-identifier hs-type">LogText</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/text-1.2.5.0/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-38"></span><span id="_LogText"><span class="annot"><span class="annottext">_LogText :: Getter LogText Text
+</span><a href="Shrun.Logging.Queue.html#_LogText"><span class="hs-identifier hs-var hs-var">_LogText</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(LogText -&gt; Text) -&gt; Getter LogText Text
+forall s a. (s -&gt; a) -&gt; Getter s a
+</span><a href="file:///nix/store/wnx39jjxjr7ivk5xmark8v1f1fl8cmvb-optics-core-0.4.1-doc/share/doc/optics-core-0.4.1/html/src/Optics.Getter.html#to"><span class="hs-identifier hs-var">to</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><a href="Shrun.Logging.Types.html#MkLogText"><span class="hs-identifier hs-type">MkLogText</span></a></span><span> </span><span id="local-6989586621679234442"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679234442"><span class="hs-identifier hs-var">t</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679234442"><span class="hs-identifier hs-var">t</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span class="hs-comment">-- | Formats a 'Log' into a 'LogText'. Applies prefix and timestamp.</span><span>
+</span><span id="line-41"></span><span class="hs-comment">--</span><span>
+</span><span id="line-42"></span><span class="hs-comment">-- ==== __Examples__</span><span>
+</span><span id="line-43"></span><span class="hs-comment">--</span><span>
+</span><span id="line-44"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- formatFileLog $ MkLog Nothing &quot;Running time: 2 seconds&quot; Info Set LogBoth</span><span>
+</span><span id="line-46"></span><span class="hs-comment">-- &quot;[2022-02-23 20:58:04.231933782 UTC] [Info] Running time: 2 seconds\n&quot;</span><span>
+</span><span id="line-47"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-48"></span><span class="hs-comment">--</span><span>
+</span><span id="line-49"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-50"></span><span class="hs-comment">-- formatFileLog $ MkLog (Just &quot;cmd&quot;) &quot;cmd: command not found&quot; Error Set LogBoth</span><span>
+</span><span id="line-51"></span><span class="hs-comment">-- &quot;[2022-02-23 20:58:04.231933782 UTC] [Error] [cmd] cmd: command not found\n&quot;</span><span>
+</span><span id="line-52"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-53"></span><span class="hs-comment">--</span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- @since 0.1</span><span>
+</span><span id="line-55"></span><span id="local-6989586621679234535"><span id="local-6989586621679234537"><span class="annot"><a href="Shrun.Logging.Queue.html#formatFileLog"><span class="hs-identifier hs-type">formatFileLog</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Shrun.Configuration.Env.Types.html#HasLogging"><span class="hs-identifier hs-type">HasLogging</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679234537"><span class="hs-identifier hs-type">env</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/mtl-2.2.2/src/Control.Monad.Reader.Class.html#MonadReader"><span class="hs-identifier hs-type">MonadReader</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679234537"><span class="hs-identifier hs-type">env</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679234535"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Shrun.Effects.Timing.html#Timing"><span class="hs-identifier hs-type">Timing</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679234535"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Shrun.Logging.Types.html#Log"><span class="hs-identifier hs-type">Log</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679234535"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Shrun.Logging.Types.html#LogText"><span class="hs-identifier hs-type">LogText</span></a></span></span></span><span>
+</span><span id="line-56"></span><span id="formatFileLog"><span class="annot"><span class="annottext">formatFileLog :: forall env (m :: Type -&gt; Type).
+(HasLogging env, MonadReader env m, Timing m) =&gt;
+Log -&gt; m LogText
+</span><a href="Shrun.Logging.Queue.html#formatFileLog"><span class="hs-identifier hs-var hs-var">formatFileLog</span></a></span></span><span> </span><span id="local-6989586621679234381"><span class="annot"><span class="annottext">Log
+</span><a href="#local-6989586621679234381"><span class="hs-identifier hs-var">log</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-57"></span><span>  </span><span id="local-6989586621679234380"><span class="annot"><span class="annottext">ZonedTime
+</span><a href="#local-6989586621679234380"><span class="hs-identifier hs-var">currTime</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m ZonedTime
+forall (m :: Type -&gt; Type). Timing m =&gt; m ZonedTime
+</span><a href="Shrun.Effects.Timing.html#getSystemTime"><span class="hs-identifier hs-var">getSystemTime</span></a></span><span>
+</span><span id="line-58"></span><span>  </span><span id="local-6989586621679234378"><span class="annot"><span class="annottext">StripControl
+</span><a href="#local-6989586621679234378"><span class="hs-identifier hs-var">stripControl</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(env -&gt; StripControl) -&gt; m StripControl
+forall r (m :: Type -&gt; Type) a. MonadReader r m =&gt; (r -&gt; a) -&gt; m a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/mtl-2.2.2/src/Control.Monad.Reader.Class.html#asks"><span class="hs-identifier hs-var">asks</span></a></span><span> </span><span class="annot"><span class="annottext">env -&gt; StripControl
+forall env. HasLogging env =&gt; env -&gt; StripControl
+</span><a href="Shrun.Configuration.Env.Types.html#getFileLogStripControl"><span class="hs-identifier hs-var">getFileLogStripControl</span></a></span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679234375"><span class="annot"><span class="annottext">msg' :: Text
+</span><a href="#local-6989586621679234375"><span class="hs-identifier hs-var hs-var">msg'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; StripControl -&gt; Text
+</span><a href="Shrun.Logging.Formatting.html#stripChars%27"><span class="hs-identifier hs-var">stripChars'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Log
+</span><a href="#local-6989586621679234381"><span class="hs-identifier hs-var">log</span></a></span><span> </span><span class="annot"><span class="annottext">Log -&gt; Optic' A_Lens NoIx Log Text -&gt; Text
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/wnx39jjxjr7ivk5xmark8v1f1fl8cmvb-optics-core-0.4.1-doc/share/doc/optics-core-0.4.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic' A_Lens NoIx Log Text
+</span><span class="">#msg</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">StripControl
+</span><a href="#local-6989586621679234378"><span class="hs-identifier hs-var">stripControl</span></a></span><span>
+</span><span id="line-60"></span><span>      </span><span id="local-6989586621679234373"><span class="annot"><span class="annottext">formatted :: Text
+</span><a href="#local-6989586621679234373"><span class="hs-identifier hs-var hs-var">formatted</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Log
+</span><a href="#local-6989586621679234381"><span class="hs-identifier hs-var">log</span></a></span><span> </span><span class="annot"><span class="annottext">Log -&gt; Optic' A_Lens NoIx Log (Maybe Command) -&gt; Maybe Command
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/wnx39jjxjr7ivk5xmark8v1f1fl8cmvb-optics-core-0.4.1-doc/share/doc/optics-core-0.4.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic' A_Lens NoIx Log (Maybe Command)
+</span><span class="">#cmd</span></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-61"></span><span>        </span><span class="annot"><span class="annottext">Maybe Command
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679234372"><span class="hs-identifier hs-var">prefix</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679234375"><span class="hs-identifier hs-var">msg'</span></a></span><span>
+</span><span id="line-62"></span><span>        </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679234371"><span class="annot"><span class="annottext">Command
+</span><a href="#local-6989586621679234371"><span class="hs-identifier hs-var">com</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679234372"><span class="hs-identifier hs-var">prefix</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;[&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Command
+</span><a href="#local-6989586621679234371"><span class="hs-identifier hs-var">com</span></a></span><span> </span><span class="annot"><span class="annottext">Command -&gt; Optic' A_Lens NoIx Command Text -&gt; Text
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/wnx39jjxjr7ivk5xmark8v1f1fl8cmvb-optics-core-0.4.1-doc/share/doc/optics-core-0.4.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic' A_Lens NoIx Command Text
+</span><span class="">#command</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;] &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679234375"><span class="hs-identifier hs-var">msg'</span></a></span><span>
+</span><span id="line-63"></span><span>      </span><span id="local-6989586621679234370"><span class="annot"><span class="annottext">withTimestamp :: Text
+</span><a href="#local-6989586621679234370"><span class="hs-identifier hs-var hs-var">withTimestamp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;[&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ZonedTime -&gt; Text
+forall a. Show a =&gt; a -&gt; Text
+</span><a href="Shrun.Prelude.html#showt"><span class="hs-identifier hs-var">showt</span></a></span><span> </span><span class="annot"><span class="annottext">ZonedTime
+</span><a href="#local-6989586621679234380"><span class="hs-identifier hs-var">currTime</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;] &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679234373"><span class="hs-identifier hs-var">formatted</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;\n&quot;</span></span><span>
+</span><span id="line-64"></span><span>  </span><span class="annot"><span class="annottext">LogText -&gt; m LogText
+forall (f :: Type -&gt; Type) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(LogText -&gt; m LogText) -&gt; LogText -&gt; m LogText
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; LogText
+</span><a href="Shrun.Logging.Types.html#UnsafeLogText"><span class="hs-identifier hs-var">UnsafeLogText</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679234370"><span class="hs-identifier hs-var">withTimestamp</span></a></span><span>
+</span><span id="line-65"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-66"></span><span>    </span><span id="local-6989586621679234372"><span class="annot"><span class="annottext">prefix :: Text
+</span><a href="#local-6989586621679234372"><span class="hs-identifier hs-var hs-var">prefix</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Log -&gt; Text
+</span><a href="Shrun.Logging.Types.html#logToPrefix"><span class="hs-identifier hs-var">Log.logToPrefix</span></a></span><span> </span><span class="annot"><span class="annottext">Log
+</span><a href="#local-6989586621679234381"><span class="hs-identifier hs-var">log</span></a></span><span>
+</span><span id="line-67"></span><span class="hs-pragma">{-# INLINEABLE</span><span> </span><span class="annot"><a href="Shrun.Logging.Queue.html#formatFileLog"><span class="hs-pragma hs-type">formatFileLog</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-68"></span><span>
+</span><span id="line-69"></span><span class="hs-comment">-- | Atomically writes to the queue.</span><span>
+</span><span id="line-70"></span><span class="hs-comment">--</span><span>
+</span><span id="line-71"></span><span class="hs-comment">-- @since 0.1</span><span>
+</span><span id="line-72"></span><span id="local-6989586621679234481"><span id="local-6989586621679234482"><span class="annot"><a href="Shrun.Logging.Queue.html#writeQueue"><span class="hs-identifier hs-type">writeQueue</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-73"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Shrun.Configuration.Env.Types.html#HasLogging"><span class="hs-identifier hs-type">HasLogging</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679234482"><span class="hs-identifier hs-type">env</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-74"></span><span>    </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/mtl-2.2.2/src/Control.Monad.Reader.Class.html#MonadReader"><span class="hs-identifier hs-type">MonadReader</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679234482"><span class="hs-identifier hs-type">env</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679234481"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-75"></span><span>    </span><span class="annot"><a href="Shrun.Effects.Mutable.html#Mutable"><span class="hs-identifier hs-type">Mutable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679234481"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-76"></span><span>    </span><span class="annot"><a href="Shrun.Effects.Timing.html#Timing"><span class="hs-identifier hs-type">Timing</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679234481"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-77"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-78"></span><span>  </span><span class="annot"><a href="Shrun.Logging.Types.html#LogTextQueue"><span class="hs-identifier hs-type">LogTextQueue</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-79"></span><span>  </span><span class="annot"><a href="Shrun.Logging.Types.html#Log"><span class="hs-identifier hs-type">Log</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-80"></span><span>  </span><span class="annot"><a href="#local-6989586621679234481"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-81"></span><span id="writeQueue"><span class="annot"><span class="annottext">writeQueue :: forall env (m :: Type -&gt; Type).
+(HasLogging env, MonadReader env m, Mutable m, Timing m) =&gt;
+LogTextQueue -&gt; Log -&gt; m ()
+</span><a href="Shrun.Logging.Queue.html#writeQueue"><span class="hs-identifier hs-var hs-var">writeQueue</span></a></span></span><span> </span><span id="local-6989586621679234354"><span class="annot"><span class="annottext">LogTextQueue
+</span><a href="#local-6989586621679234354"><span class="hs-identifier hs-var">queue</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">LogText -&gt; m ()
+</span><a href="#local-6989586621679234353"><span class="hs-identifier hs-var">writeq</span></a></span><span> </span><span class="annot"><span class="annottext">(LogText -&gt; m ()) -&gt; (Log -&gt; m LogText) -&gt; Log -&gt; m ()
+forall (m :: Type -&gt; Type) b c a.
+Monad m =&gt;
+(b -&gt; m c) -&gt; (a -&gt; m b) -&gt; a -&gt; m c
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/Control.Monad.html#%3C%3D%3C"><span class="hs-operator hs-var">&lt;=&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">Log -&gt; m LogText
+forall env (m :: Type -&gt; Type).
+(HasLogging env, MonadReader env m, Timing m) =&gt;
+Log -&gt; m LogText
+</span><a href="Shrun.Logging.Queue.html#formatFileLog"><span class="hs-identifier hs-var">formatFileLog</span></a></span><span>
+</span><span id="line-82"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-83"></span><span>    </span><span id="local-6989586621679234353"><span class="annot"><span class="annottext">writeq :: LogText -&gt; m ()
+</span><a href="#local-6989586621679234353"><span class="hs-identifier hs-var hs-var">writeq</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">STM () -&gt; m ()
+forall (m :: Type -&gt; Type) a. Mutable m =&gt; STM a -&gt; m a
+</span><a href="Shrun.Effects.Mutable.html#liftSTM"><span class="hs-identifier hs-var">liftSTM</span></a></span><span> </span><span class="annot"><span class="annottext">(STM () -&gt; m ()) -&gt; (LogText -&gt; STM ()) -&gt; LogText -&gt; m ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">TBQueue LogText -&gt; LogText -&gt; STM ()
+forall a. TBQueue a -&gt; a -&gt; STM ()
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/stm-2.5.0.2/src/Control.Concurrent.STM.TBQueue.html#writeTBQueue"><span class="hs-identifier hs-var">writeTBQueue</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LogTextQueue
+</span><a href="#local-6989586621679234354"><span class="hs-identifier hs-var">queue</span></a></span><span> </span><span class="annot"><span class="annottext">LogTextQueue
+-&gt; Optic' An_Iso NoIx LogTextQueue (TBQueue LogText)
+-&gt; TBQueue LogText
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/wnx39jjxjr7ivk5xmark8v1f1fl8cmvb-optics-core-0.4.1-doc/share/doc/optics-core-0.4.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic' An_Iso NoIx LogTextQueue (TBQueue LogText)
+</span><a href="Shrun.Logging.Types.html#_MkLogTextQueue"><span class="hs-identifier hs-var">_MkLogTextQueue</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-84"></span><span class="hs-pragma">{-# INLINEABLE</span><span> </span><span class="annot"><a href="Shrun.Logging.Queue.html#writeQueue"><span class="hs-pragma hs-type">writeQueue</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-85"></span><span>
+</span><span id="line-86"></span><span class="hs-comment">-- | Atomically reads from the queue. Does not retry.</span><span>
+</span><span id="line-87"></span><span class="hs-comment">--</span><span>
+</span><span id="line-88"></span><span class="hs-comment">-- @since 0.1</span><span>
+</span><span id="line-89"></span><span id="local-6989586621679234463"><span class="annot"><a href="Shrun.Logging.Queue.html#readQueue"><span class="hs-identifier hs-type">readQueue</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Shrun.Effects.Mutable.html#Mutable"><span class="hs-identifier hs-type">Mutable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679234463"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Shrun.Logging.Types.html#LogTextQueue"><span class="hs-identifier hs-type">LogTextQueue</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679234463"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Shrun.Logging.Types.html#LogText"><span class="hs-identifier hs-type">LogText</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-90"></span><span id="readQueue"><span class="annot"><span class="annottext">readQueue :: forall (m :: Type -&gt; Type).
+Mutable m =&gt;
+LogTextQueue -&gt; m (Maybe LogText)
+</span><a href="Shrun.Logging.Queue.html#readQueue"><span class="hs-identifier hs-var hs-var">readQueue</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">STM (Maybe LogText) -&gt; m (Maybe LogText)
+forall (m :: Type -&gt; Type) a. Mutable m =&gt; STM a -&gt; m a
+</span><a href="Shrun.Effects.Mutable.html#liftSTM"><span class="hs-identifier hs-var">liftSTM</span></a></span><span> </span><span class="annot"><span class="annottext">(STM (Maybe LogText) -&gt; m (Maybe LogText))
+-&gt; (LogTextQueue -&gt; STM (Maybe LogText))
+-&gt; LogTextQueue
+-&gt; m (Maybe LogText)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">TBQueue LogText -&gt; STM (Maybe LogText)
+forall a. TBQueue a -&gt; STM (Maybe a)
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/stm-2.5.0.2/src/Control.Concurrent.STM.TBQueue.html#tryReadTBQueue"><span class="hs-identifier hs-var">tryReadTBQueue</span></a></span><span> </span><span class="annot"><span class="annottext">(TBQueue LogText -&gt; STM (Maybe LogText))
+-&gt; (LogTextQueue -&gt; TBQueue LogText)
+-&gt; LogTextQueue
+-&gt; STM (Maybe LogText)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic' An_Iso NoIx LogTextQueue (TBQueue LogText)
+-&gt; LogTextQueue -&gt; TBQueue LogText
+forall k (is :: IxList) s a.
+Is k A_Getter =&gt;
+Optic' k is s a -&gt; s -&gt; a
+</span><a href="file:///nix/store/wnx39jjxjr7ivk5xmark8v1f1fl8cmvb-optics-core-0.4.1-doc/share/doc/optics-core-0.4.1/html/src/Optics.Getter.html#view"><span class="hs-identifier hs-var">view</span></a></span><span> </span><span class="annot"><span class="annottext">Optic' An_Iso NoIx LogTextQueue (TBQueue LogText)
+</span><a href="Shrun.Logging.Types.html#_MkLogTextQueue"><span class="hs-identifier hs-var">_MkLogTextQueue</span></a></span><span>
+</span><span id="line-91"></span><span class="hs-pragma">{-# INLINEABLE</span><span> </span><span class="annot"><a href="Shrun.Logging.Queue.html#readQueue"><span class="hs-pragma hs-type">readQueue</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-92"></span><span>
+</span><span id="line-93"></span><span class="hs-comment">-- | Atomically flushes the queue's entire contents. Does not retry.</span><span>
+</span><span id="line-94"></span><span class="hs-comment">--</span><span>
+</span><span id="line-95"></span><span class="hs-comment">-- @since 0.1</span><span>
+</span><span id="line-96"></span><span id="local-6989586621679234456"><span class="annot"><a href="Shrun.Logging.Queue.html#flushQueue"><span class="hs-identifier hs-type">flushQueue</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Shrun.Effects.Mutable.html#Mutable"><span class="hs-identifier hs-type">Mutable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679234456"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Shrun.Logging.Types.html#LogTextQueue"><span class="hs-identifier hs-type">LogTextQueue</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679234456"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Shrun.Prelude.html#List"><span class="hs-identifier hs-type">List</span></a></span><span> </span><span class="annot"><a href="Shrun.Logging.Types.html#LogText"><span class="hs-identifier hs-type">LogText</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-97"></span><span id="flushQueue"><span class="annot"><span class="annottext">flushQueue :: forall (m :: Type -&gt; Type).
+Mutable m =&gt;
+LogTextQueue -&gt; m (List LogText)
+</span><a href="Shrun.Logging.Queue.html#flushQueue"><span class="hs-identifier hs-var hs-var">flushQueue</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">STM (List LogText) -&gt; m (List LogText)
+forall (m :: Type -&gt; Type) a. Mutable m =&gt; STM a -&gt; m a
+</span><a href="Shrun.Effects.Mutable.html#liftSTM"><span class="hs-identifier hs-var">liftSTM</span></a></span><span> </span><span class="annot"><span class="annottext">(STM (List LogText) -&gt; m (List LogText))
+-&gt; (LogTextQueue -&gt; STM (List LogText))
+-&gt; LogTextQueue
+-&gt; m (List LogText)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">TBQueue LogText -&gt; STM (List LogText)
+forall a. TBQueue a -&gt; STM [a]
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/stm-2.5.0.2/src/Control.Concurrent.STM.TBQueue.html#flushTBQueue"><span class="hs-identifier hs-var">flushTBQueue</span></a></span><span> </span><span class="annot"><span class="annottext">(TBQueue LogText -&gt; STM (List LogText))
+-&gt; (LogTextQueue -&gt; TBQueue LogText)
+-&gt; LogTextQueue
+-&gt; STM (List LogText)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic' An_Iso NoIx LogTextQueue (TBQueue LogText)
+-&gt; LogTextQueue -&gt; TBQueue LogText
+forall k (is :: IxList) s a.
+Is k A_Getter =&gt;
+Optic' k is s a -&gt; s -&gt; a
+</span><a href="file:///nix/store/wnx39jjxjr7ivk5xmark8v1f1fl8cmvb-optics-core-0.4.1-doc/share/doc/optics-core-0.4.1/html/src/Optics.Getter.html#view"><span class="hs-identifier hs-var">view</span></a></span><span> </span><span class="annot"><span class="annottext">Optic' An_Iso NoIx LogTextQueue (TBQueue LogText)
+</span><a href="Shrun.Logging.Types.html#_MkLogTextQueue"><span class="hs-identifier hs-var">_MkLogTextQueue</span></a></span><span>
+</span><span id="line-98"></span><span class="hs-pragma">{-# INLINEABLE</span><span> </span><span class="annot"><a href="Shrun.Logging.Queue.html#flushQueue"><span class="hs-pragma hs-type">flushQueue</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-99"></span></pre></body></html>

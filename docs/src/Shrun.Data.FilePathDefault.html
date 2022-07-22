@@ -1,0 +1,76 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE TemplateHaskell #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- | Provides the 'FilePathDefault' type.</span><span>
+</span><span id="line-4"></span><span class="hs-comment">--</span><span>
+</span><span id="line-5"></span><span class="hs-comment">-- @since 0.1</span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Shrun.Data.FilePathDefault</span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Shrun.Data.FilePathDefault.html#FilePathDefault"><span class="hs-identifier">FilePathDefault</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span>    </span><span class="annot"><a href="Shrun.Data.FilePathDefault.html#_FPDefault"><span class="hs-identifier">_FPDefault</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>    </span><span class="annot"><a href="Shrun.Data.FilePathDefault.html#_FPManual"><span class="hs-identifier">_FPManual</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Shrun.Prelude.html"><span class="hs-identifier">Shrun.Prelude</span></a></span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-comment">-- | FilePath option that includes a default possibility.</span><span>
+</span><span id="line-16"></span><span class="hs-comment">--</span><span>
+</span><span id="line-17"></span><span class="hs-comment">-- @since 0.1</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">data</span><span> </span><span id="FilePathDefault"><span class="annot"><a href="Shrun.Data.FilePathDefault.html#FilePathDefault"><span class="hs-identifier hs-var">FilePathDefault</span></a></span></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-20"></span><span>    </span><span id="FPDefault"><span class="annot"><a href="Shrun.Data.FilePathDefault.html#FPDefault"><span class="hs-identifier hs-var">FPDefault</span></a></span></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-22"></span><span>    </span><span id="FPManual"><span class="annot"><a href="Shrun.Data.FilePathDefault.html#FPManual"><span class="hs-identifier hs-var">FPManual</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span>
+</span><span id="line-24"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-25"></span><span>      </span><span id="local-6989586621679229703"><span id="local-6989586621679229708"><span class="annot"><span class="annottext">FilePathDefault -&gt; FilePathDefault -&gt; Bool
+(FilePathDefault -&gt; FilePathDefault -&gt; Bool)
+-&gt; (FilePathDefault -&gt; FilePathDefault -&gt; Bool)
+-&gt; Eq FilePathDefault
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: FilePathDefault -&gt; FilePathDefault -&gt; Bool
+$c/= :: FilePathDefault -&gt; FilePathDefault -&gt; Bool
+== :: FilePathDefault -&gt; FilePathDefault -&gt; Bool
+$c== :: FilePathDefault -&gt; FilePathDefault -&gt; Bool
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/ghc-prim-0.8.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>      </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-27"></span><span>      </span><span id="local-6989586621679229690"><span id="local-6989586621679229692"><span id="local-6989586621679229699"><span class="annot"><span class="annottext">Int -&gt; FilePathDefault -&gt; ShowS
+[FilePathDefault] -&gt; ShowS
+FilePathDefault -&gt; FilePath
+(Int -&gt; FilePathDefault -&gt; ShowS)
+-&gt; (FilePathDefault -&gt; FilePath)
+-&gt; ([FilePathDefault] -&gt; ShowS)
+-&gt; Show FilePathDefault
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; FilePath) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [FilePathDefault] -&gt; ShowS
+$cshowList :: [FilePathDefault] -&gt; ShowS
+show :: FilePathDefault -&gt; FilePath
+$cshow :: FilePathDefault -&gt; FilePath
+showsPrec :: Int -&gt; FilePathDefault -&gt; ShowS
+$cshowsPrec :: Int -&gt; FilePathDefault -&gt; ShowS
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span>
+</span><span id="line-28"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-comment">-- | @since 0.5</span><span>
+</span><span id="line-31"></span><span id="_FPManual"><span id="_FPDefault"><span class="hs-identifier">makePrisms</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">FilePathDefault</span></span></span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="hs-comment">-- | @since 0.5</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">DecodeTOML</span></span><span> </span><span class="annot"><a href="Shrun.Data.FilePathDefault.html#FilePathDefault"><span class="hs-identifier hs-type">FilePathDefault</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-35"></span><span>  </span><span id="local-6989586621679229671"><span class="annot"><span class="annottext">tomlDecoder :: Decoder FilePathDefault
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">tomlDecoder</span></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-36"></span><span>    </span><span class="annot"><span class="annottext">forall a. DecodeTOML a =&gt; Decoder a
+</span><span class="hs-identifier hs-var">tomlDecoder</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/text-1.2.5.0/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="annot"><span class="annottext">Decoder Text
+-&gt; (Text -&gt; FilePathDefault) -&gt; Decoder FilePathDefault
+forall (f :: Type -&gt; Type) a b. Functor f =&gt; f a -&gt; (a -&gt; b) -&gt; f b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/Data.Functor.html#%3C%26%3E"><span class="hs-operator hs-var">&lt;&amp;&gt;</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-37"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;default&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">FilePathDefault
+</span><a href="Shrun.Data.FilePathDefault.html#FPDefault"><span class="hs-identifier hs-var">FPDefault</span></a></span><span>
+</span><span id="line-38"></span><span>      </span><span id="local-6989586621679229668"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679229668"><span class="hs-identifier hs-var">other</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; FilePathDefault
+</span><a href="Shrun.Data.FilePathDefault.html#FPManual"><span class="hs-identifier hs-var">FPManual</span></a></span><span> </span><span class="annot"><span class="annottext">(FilePath -&gt; FilePathDefault) -&gt; FilePath -&gt; FilePathDefault
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; FilePath
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/text-1.2.5.0/src/Data.Text.Show.html#unpack"><span class="hs-identifier hs-var">unpack</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679229668"><span class="hs-identifier hs-var">other</span></a></span><span>
+</span><span id="line-39"></span></pre></body></html>

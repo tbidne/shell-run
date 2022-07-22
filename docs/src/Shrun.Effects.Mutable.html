@@ -1,0 +1,139 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-comment">-- | Provides the 'Mutable' typeclass.</span><span>
+</span><span id="line-2"></span><span class="hs-comment">--</span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- @since 0.3</span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Shrun.Effects.Mutable</span><span>
+</span><span id="line-5"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Shrun.Effects.Mutable.html#Mutable"><span class="hs-identifier">Mutable</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/stm-2.5.0.2/src/Control.Concurrent.STM.html"><span class="hs-identifier">Control.Concurrent.STM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Conc.Sync.html#STM"><span class="hs-identifier">STM</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/stm-2.5.0.2/src/Control.Concurrent.STM.TVar.html"><span class="hs-identifier">Control.Concurrent.STM.TVar</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">TVar</span></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/Data.IORef.html"><span class="hs-identifier">Data.IORef</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Ref</span></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Shrun.Prelude.html"><span class="hs-identifier">Shrun.Prelude</span></a></span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-comment">-- | Represents mutable operations e.g. STM, IORefs.</span><span>
+</span><span id="line-15"></span><span class="hs-comment">--</span><span>
+</span><span id="line-16"></span><span class="hs-comment">-- @since 0.5</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">class</span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#Monad"><span class="hs-identifier hs-type">Monad</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679228736"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span id="Mutable"><span class="annot"><a href="Shrun.Effects.Mutable.html#Mutable"><span class="hs-identifier hs-var">Mutable</span></a></span></span><span> </span><span id="local-6989586621679228736"><span class="annot"><a href="#local-6989586621679228736"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-comment">-- | @since 0.5</span><span>
+</span><span id="line-19"></span><span>  </span><span id="liftSTM"><span class="annot"><a href="Shrun.Effects.Mutable.html#liftSTM"><span class="hs-identifier hs-type">liftSTM</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621679228734"><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Conc.Sync.html#STM"><span class="hs-identifier hs-type">STM</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679228734"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679228736"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679228734"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-comment">-- | @since 0.5</span><span>
+</span><span id="line-22"></span><span>  </span><span id="newIORef"><span class="annot"><a href="Shrun.Effects.Mutable.html#newIORef"><span class="hs-identifier hs-type">newIORef</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621679228732"><span class="annot"><a href="#local-6989586621679228732"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679228736"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.IORef.html#IORef"><span class="hs-identifier hs-type">IORef</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679228732"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-comment">-- | @since 0.5</span><span>
+</span><span id="line-25"></span><span>  </span><span id="readIORef"><span class="annot"><a href="Shrun.Effects.Mutable.html#readIORef"><span class="hs-identifier hs-type">readIORef</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621679228730"><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.IORef.html#IORef"><span class="hs-identifier hs-type">IORef</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679228730"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679228736"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679228730"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-comment">-- | @since 0.5</span><span>
+</span><span id="line-28"></span><span>  </span><span id="modifyIORef%27"><span class="annot"><a href="Shrun.Effects.Mutable.html#modifyIORef%27"><span class="hs-identifier hs-type">modifyIORef'</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621679228729"><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.IORef.html#IORef"><span class="hs-identifier hs-type">IORef</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679228729"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679228729"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679228729"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679228736"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-comment">-- | @since 0.5</span><span>
+</span><span id="line-31"></span><span>  </span><span id="newTVarIO"><span class="annot"><a href="Shrun.Effects.Mutable.html#newTVarIO"><span class="hs-identifier hs-type">newTVarIO</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621679228728"><span class="annot"><a href="#local-6989586621679228728"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679228736"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Conc.Sync.html#TVar"><span class="hs-identifier hs-type">TVar</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679228728"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-comment">-- | @since 0.5</span><span>
+</span><span id="line-34"></span><span>  </span><span id="readTVarIO"><span class="annot"><a href="Shrun.Effects.Mutable.html#readTVarIO"><span class="hs-identifier hs-type">readTVarIO</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621679228726"><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Conc.Sync.html#TVar"><span class="hs-identifier hs-type">TVar</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679228726"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679228736"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679228726"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span class="hs-comment">-- | @since 0.5</span><span>
+</span><span id="line-37"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Shrun.Effects.Mutable.html#Mutable"><span class="hs-identifier hs-type">Mutable</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/ghc-prim-0.8.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-38"></span><span>  </span><span id="local-6989586621679228680"><span class="annot"><span class="annottext">liftSTM :: forall a. STM a -&gt; IO a
+</span><a href="#local-6989586621679228680"><span class="hs-identifier hs-var hs-var hs-var hs-var">liftSTM</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">STM a -&gt; IO a
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">atomically</span></a></span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span>  </span><span id="local-6989586621679228678"><span class="annot"><span class="annottext">newIORef :: forall a. a -&gt; IO (IORef a)
+</span><a href="#local-6989586621679228678"><span class="hs-identifier hs-var hs-var hs-var hs-var">newIORef</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; IO (IORef a)
+forall a. a -&gt; IO (IORef a)
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.IORef.html#newIORef"><span class="hs-identifier hs-var">Ref.newIORef</span></a></span><span>
+</span><span id="line-41"></span><span>  </span><span id="local-6989586621679228676"><span class="annot"><span class="annottext">readIORef :: forall a. IORef a -&gt; IO a
+</span><a href="#local-6989586621679228676"><span class="hs-identifier hs-var hs-var hs-var hs-var">readIORef</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IORef a -&gt; IO a
+forall a. IORef a -&gt; IO a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.IORef.html#readIORef"><span class="hs-identifier hs-var">Ref.readIORef</span></a></span><span>
+</span><span id="line-42"></span><span>  </span><span id="local-6989586621679228674"><span class="annot"><span class="annottext">modifyIORef' :: forall a. IORef a -&gt; (a -&gt; a) -&gt; IO ()
+</span><a href="#local-6989586621679228674"><span class="hs-identifier hs-var hs-var hs-var hs-var">modifyIORef'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IORef a -&gt; (a -&gt; a) -&gt; IO ()
+forall a. IORef a -&gt; (a -&gt; a) -&gt; IO ()
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/Data.IORef.html#modifyIORef%27"><span class="hs-identifier hs-var">Ref.modifyIORef'</span></a></span><span>
+</span><span id="line-43"></span><span>
+</span><span id="line-44"></span><span>  </span><span id="local-6989586621679228672"><span class="annot"><span class="annottext">newTVarIO :: forall a. a -&gt; IO (TVar a)
+</span><a href="#local-6989586621679228672"><span class="hs-identifier hs-var hs-var hs-var hs-var">newTVarIO</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; IO (TVar a)
+forall a. a -&gt; IO (TVar a)
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Conc.Sync.html#newTVarIO"><span class="hs-identifier hs-var">TVar.newTVarIO</span></a></span><span>
+</span><span id="line-45"></span><span>  </span><span id="local-6989586621679228670"><span class="annot"><span class="annottext">readTVarIO :: forall a. TVar a -&gt; IO a
+</span><a href="#local-6989586621679228670"><span class="hs-identifier hs-var hs-var hs-var hs-var">readTVarIO</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TVar a -&gt; IO a
+forall a. TVar a -&gt; IO a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Conc.Sync.html#readTVarIO"><span class="hs-identifier hs-var">TVar.readTVarIO</span></a></span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span class="hs-comment">-- | @since 0.5</span><span>
+</span><span id="line-48"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679228713"><span id="local-6989586621679228714"><span class="annot"><a href="Shrun.Effects.Mutable.html#Mutable"><span class="hs-identifier hs-type">Mutable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679228714"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Shrun.Effects.Mutable.html#Mutable"><span class="hs-identifier hs-type">Mutable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/transformers-0.5.6.2/src/Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-type">ReaderT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679228713"><span class="hs-identifier hs-type">env</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679228714"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-49"></span><span>  </span><span id="local-6989586621679228652"><span class="annot"><span class="annottext">liftSTM :: forall a. STM a -&gt; ReaderT env m a
+</span><a href="#local-6989586621679228652"><span class="hs-identifier hs-var hs-var hs-var hs-var">liftSTM</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m a -&gt; ReaderT env m a
+forall (t :: (Type -&gt; Type) -&gt; Type -&gt; Type) (m :: Type -&gt; Type) a.
+(MonadTrans t, Monad m) =&gt;
+m a -&gt; t m a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/transformers-0.5.6.2/src/Control.Monad.Trans.Class.html#lift"><span class="hs-identifier hs-var">lift</span></a></span><span> </span><span class="annot"><span class="annottext">(m a -&gt; ReaderT env m a)
+-&gt; (STM a -&gt; m a) -&gt; STM a -&gt; ReaderT env m a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">STM a -&gt; m a
+forall (m :: Type -&gt; Type) a. Mutable m =&gt; STM a -&gt; m a
+</span><a href="Shrun.Effects.Mutable.html#liftSTM"><span class="hs-identifier hs-var">liftSTM</span></a></span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span>  </span><span id="local-6989586621679228646"><span class="annot"><span class="annottext">newIORef :: forall a. a -&gt; ReaderT env m (IORef a)
+</span><a href="#local-6989586621679228646"><span class="hs-identifier hs-var hs-var hs-var hs-var">newIORef</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m (IORef a) -&gt; ReaderT env m (IORef a)
+forall (t :: (Type -&gt; Type) -&gt; Type -&gt; Type) (m :: Type -&gt; Type) a.
+(MonadTrans t, Monad m) =&gt;
+m a -&gt; t m a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/transformers-0.5.6.2/src/Control.Monad.Trans.Class.html#lift"><span class="hs-identifier hs-var">lift</span></a></span><span> </span><span class="annot"><span class="annottext">(m (IORef a) -&gt; ReaderT env m (IORef a))
+-&gt; (a -&gt; m (IORef a)) -&gt; a -&gt; ReaderT env m (IORef a)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; m (IORef a)
+forall (m :: Type -&gt; Type) a. Mutable m =&gt; a -&gt; m (IORef a)
+</span><a href="Shrun.Effects.Mutable.html#newIORef"><span class="hs-identifier hs-var">newIORef</span></a></span><span>
+</span><span id="line-52"></span><span>  </span><span id="local-6989586621679228642"><span class="annot"><span class="annottext">readIORef :: forall a. IORef a -&gt; ReaderT env m a
+</span><a href="#local-6989586621679228642"><span class="hs-identifier hs-var hs-var hs-var hs-var">readIORef</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m a -&gt; ReaderT env m a
+forall (t :: (Type -&gt; Type) -&gt; Type -&gt; Type) (m :: Type -&gt; Type) a.
+(MonadTrans t, Monad m) =&gt;
+m a -&gt; t m a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/transformers-0.5.6.2/src/Control.Monad.Trans.Class.html#lift"><span class="hs-identifier hs-var">lift</span></a></span><span> </span><span class="annot"><span class="annottext">(m a -&gt; ReaderT env m a)
+-&gt; (IORef a -&gt; m a) -&gt; IORef a -&gt; ReaderT env m a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">IORef a -&gt; m a
+forall (m :: Type -&gt; Type) a. Mutable m =&gt; IORef a -&gt; m a
+</span><a href="Shrun.Effects.Mutable.html#readIORef"><span class="hs-identifier hs-var">readIORef</span></a></span><span>
+</span><span id="line-53"></span><span>  </span><span id="local-6989586621679228638"><span class="annot"><span class="annottext">modifyIORef' :: forall a. IORef a -&gt; (a -&gt; a) -&gt; ReaderT env m ()
+</span><a href="#local-6989586621679228638"><span class="hs-identifier hs-var hs-var hs-var hs-var">modifyIORef'</span></a></span></span><span> </span><span id="local-6989586621679228637"><span class="annot"><span class="annottext">IORef a
+</span><a href="#local-6989586621679228637"><span class="hs-identifier hs-var">ref</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m () -&gt; ReaderT env m ()
+forall (t :: (Type -&gt; Type) -&gt; Type -&gt; Type) (m :: Type -&gt; Type) a.
+(MonadTrans t, Monad m) =&gt;
+m a -&gt; t m a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/transformers-0.5.6.2/src/Control.Monad.Trans.Class.html#lift"><span class="hs-identifier hs-var">lift</span></a></span><span> </span><span class="annot"><span class="annottext">(m () -&gt; ReaderT env m ())
+-&gt; ((a -&gt; a) -&gt; m ()) -&gt; (a -&gt; a) -&gt; ReaderT env m ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">IORef a -&gt; (a -&gt; a) -&gt; m ()
+forall (m :: Type -&gt; Type) a.
+Mutable m =&gt;
+IORef a -&gt; (a -&gt; a) -&gt; m ()
+</span><a href="Shrun.Effects.Mutable.html#modifyIORef%27"><span class="hs-identifier hs-var">modifyIORef'</span></a></span><span> </span><span class="annot"><span class="annottext">IORef a
+</span><a href="#local-6989586621679228637"><span class="hs-identifier hs-var">ref</span></a></span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span>  </span><span id="local-6989586621679228633"><span class="annot"><span class="annottext">newTVarIO :: forall a. a -&gt; ReaderT env m (TVar a)
+</span><a href="#local-6989586621679228633"><span class="hs-identifier hs-var hs-var hs-var hs-var">newTVarIO</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m (TVar a) -&gt; ReaderT env m (TVar a)
+forall (t :: (Type -&gt; Type) -&gt; Type -&gt; Type) (m :: Type -&gt; Type) a.
+(MonadTrans t, Monad m) =&gt;
+m a -&gt; t m a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/transformers-0.5.6.2/src/Control.Monad.Trans.Class.html#lift"><span class="hs-identifier hs-var">lift</span></a></span><span> </span><span class="annot"><span class="annottext">(m (TVar a) -&gt; ReaderT env m (TVar a))
+-&gt; (a -&gt; m (TVar a)) -&gt; a -&gt; ReaderT env m (TVar a)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; m (TVar a)
+forall (m :: Type -&gt; Type) a. Mutable m =&gt; a -&gt; m (TVar a)
+</span><a href="Shrun.Effects.Mutable.html#newTVarIO"><span class="hs-identifier hs-var">newTVarIO</span></a></span><span>
+</span><span id="line-56"></span><span>  </span><span id="local-6989586621679228629"><span class="annot"><span class="annottext">readTVarIO :: forall a. TVar a -&gt; ReaderT env m a
+</span><a href="#local-6989586621679228629"><span class="hs-identifier hs-var hs-var hs-var hs-var">readTVarIO</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m a -&gt; ReaderT env m a
+forall (t :: (Type -&gt; Type) -&gt; Type -&gt; Type) (m :: Type -&gt; Type) a.
+(MonadTrans t, Monad m) =&gt;
+m a -&gt; t m a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/transformers-0.5.6.2/src/Control.Monad.Trans.Class.html#lift"><span class="hs-identifier hs-var">lift</span></a></span><span> </span><span class="annot"><span class="annottext">(m a -&gt; ReaderT env m a)
+-&gt; (TVar a -&gt; m a) -&gt; TVar a -&gt; ReaderT env m a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">TVar a -&gt; m a
+forall (m :: Type -&gt; Type) a. Mutable m =&gt; TVar a -&gt; m a
+</span><a href="Shrun.Effects.Mutable.html#readTVarIO"><span class="hs-identifier hs-var">readTVarIO</span></a></span><span>
+</span><span id="line-57"></span></pre></body></html>

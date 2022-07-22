@@ -1,0 +1,812 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span id="local-6989586621679230460"><span id="local-6989586621679230461"><span id="local-6989586621679230462"><span id="local-6989586621679230463"><span id="local-6989586621679230464"><span id="local-6989586621679230465"></span></span></span></span></span></span><span class="hs-pragma">{-# LANGUAGE TemplateHaskell #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-comment">-- | This module provides the `Log` type and associated functions.</span><span>
+</span><span id="line-5"></span><span class="hs-comment">--</span><span>
+</span><span id="line-6"></span><span class="hs-comment">-- @since 0.3</span><span>
+</span><span id="line-7"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Shrun.Logging.Types</span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-comment">-- * Types for logging</span></span><span>
+</span><span id="line-9"></span><span>    </span><span class="annot"><a href="Shrun.Logging.Types.html#Log"><span class="hs-identifier">Log</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>    </span><span class="annot"><a href="Shrun.Logging.Types.html#LogMode"><span class="hs-identifier">LogMode</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>    </span><span class="annot"><a href="Shrun.Logging.Types.html#LogLevel"><span class="hs-identifier">LogLevel</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>    </span><span class="annot"><a href="Shrun.Logging.Types.html#LogDest"><span class="hs-identifier">LogDest</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Utility functions for associate levels to colors/prefixes.</span></span><span>
+</span><span id="line-15"></span><span>    </span><span class="annot"><a href="Shrun.Logging.Types.html#logToColor"><span class="hs-identifier">logToColor</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>    </span><span class="annot"><a href="Shrun.Logging.Types.html#logToPrefix"><span class="hs-identifier">logToPrefix</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>    </span><span class="annot"><a href="Shrun.Logging.Types.html#levelToColor"><span class="hs-identifier">levelToColor</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>    </span><span class="annot"><a href="Shrun.Logging.Types.html#levelToPrefix"><span class="hs-identifier">levelToPrefix</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Log Queue</span></span><span>
+</span><span id="line-21"></span><span>    </span><span class="annot"><a href="Shrun.Logging.Types.html#LogText"><span class="hs-identifier">LogText</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Shrun.Logging.Types.html#MkLogText"><span class="hs-identifier">MkLogText</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>    </span><span class="annot"><a href="Shrun.Logging.Types.html#_MkLogText"><span class="hs-identifier">_MkLogText</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>    </span><span class="annot"><a href="Shrun.Logging.Types.html#LogTextQueue"><span class="hs-identifier">LogTextQueue</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>    </span><span class="annot"><a href="Shrun.Logging.Types.html#_MkLogTextQueue"><span class="hs-identifier">_MkLogTextQueue</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Shrun.Data.Command.html"><span class="hs-identifier">Shrun.Data.Command</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Shrun.Data.Command.html#Command"><span class="hs-identifier">Command</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Shrun.Data.Supremum.html"><span class="hs-identifier">Shrun.Data.Supremum</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Shrun.Data.Supremum.html#Supremum"><span class="hs-identifier">Supremum</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Shrun.Prelude.html"><span class="hs-identifier">Shrun.Prelude</span></a></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/2adzkqwlfywz79bbpv8bs6hyn5ad35dz-pretty-terminal-0.1.0.0-doc/share/doc/pretty-terminal-0.1.0.0/html/src/System.Console.Pretty.html"><span class="hs-identifier">System.Console.Pretty</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/2adzkqwlfywz79bbpv8bs6hyn5ad35dz-pretty-terminal-0.1.0.0-doc/share/doc/pretty-terminal-0.1.0.0/html/src/System.Console.Pretty.html#Color"><span class="hs-identifier">Color</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/2adzkqwlfywz79bbpv8bs6hyn5ad35dz-pretty-terminal-0.1.0.0-doc/share/doc/pretty-terminal-0.1.0.0/html/src/System.Console.Pretty.html"><span class="hs-identifier">System.Console.Pretty</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">P</span></span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span class="hs-comment">-- | Determines the logging behavior.</span><span>
+</span><span id="line-35"></span><span class="hs-comment">--</span><span>
+</span><span id="line-36"></span><span class="hs-comment">-- @since 0.1</span><span>
+</span><span id="line-37"></span><span class="hs-keyword">data</span><span> </span><span id="LogMode"><span class="annot"><a href="Shrun.Logging.Types.html#LogMode"><span class="hs-identifier hs-var">LogMode</span></a></span></span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-comment">-- | Sets the logging region to this log.</span><span>
+</span><span id="line-39"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-40"></span><span>    </span><span class="hs-comment">-- @since 0.1</span><span>
+</span><span id="line-41"></span><span>    </span><span id="Set"><span class="annot"><a href="Shrun.Logging.Types.html#Set"><span class="hs-identifier hs-var">Set</span></a></span></span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="hs-comment">-- | Appends the log to the logging region.</span><span>
+</span><span id="line-43"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-44"></span><span>    </span><span class="hs-comment">-- @since 0.1</span><span>
+</span><span id="line-45"></span><span>    </span><span id="Append"><span class="annot"><a href="Shrun.Logging.Types.html#Append"><span class="hs-identifier hs-var">Append</span></a></span></span><span>
+</span><span id="line-46"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="hs-comment">-- | Closes the logging region, finishing with the log.</span><span>
+</span><span id="line-47"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-48"></span><span>    </span><span class="hs-comment">-- @since 0.1</span><span>
+</span><span id="line-49"></span><span>    </span><span id="Finish"><span class="annot"><a href="Shrun.Logging.Types.html#Finish"><span class="hs-identifier hs-var">Finish</span></a></span></span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span>
+</span><span id="line-51"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-52"></span><span>      </span><span id="local-6989586621679230416"><span id="local-6989586621679230418"><span class="annot"><span class="annottext">LogMode
+LogMode -&gt; LogMode -&gt; Bounded LogMode
+forall (a :: OpticKind). a -&gt; a -&gt; Bounded a
+maxBound :: LogMode
+$cmaxBound :: LogMode
+minBound :: LogMode
+$cminBound :: LogMode
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Enum.html#Bounded"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Bounded</span></a></span></span></span><span class="hs-special">,</span><span>
+</span><span id="line-53"></span><span>      </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-54"></span><span>      </span><span id="local-6989586621679230372"><span id="local-6989586621679230374"><span id="local-6989586621679230378"><span id="local-6989586621679230382"><span id="local-6989586621679230384"><span id="local-6989586621679230398"><span id="local-6989586621679230404"><span id="local-6989586621679230412"><span class="annot"><span class="annottext">Int -&gt; LogMode
+LogMode -&gt; Int
+LogMode -&gt; [LogMode]
+LogMode -&gt; LogMode
+LogMode -&gt; LogMode -&gt; [LogMode]
+LogMode -&gt; LogMode -&gt; LogMode -&gt; [LogMode]
+(LogMode -&gt; LogMode)
+-&gt; (LogMode -&gt; LogMode)
+-&gt; (Int -&gt; LogMode)
+-&gt; (LogMode -&gt; Int)
+-&gt; (LogMode -&gt; [LogMode])
+-&gt; (LogMode -&gt; LogMode -&gt; [LogMode])
+-&gt; (LogMode -&gt; LogMode -&gt; [LogMode])
+-&gt; (LogMode -&gt; LogMode -&gt; LogMode -&gt; [LogMode])
+-&gt; Enum LogMode
+forall (a :: OpticKind).
+(a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Int -&gt; a)
+-&gt; (a -&gt; Int)
+-&gt; (a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; a -&gt; [a])
+-&gt; Enum a
+enumFromThenTo :: LogMode -&gt; LogMode -&gt; LogMode -&gt; [LogMode]
+$cenumFromThenTo :: LogMode -&gt; LogMode -&gt; LogMode -&gt; [LogMode]
+enumFromTo :: LogMode -&gt; LogMode -&gt; [LogMode]
+$cenumFromTo :: LogMode -&gt; LogMode -&gt; [LogMode]
+enumFromThen :: LogMode -&gt; LogMode -&gt; [LogMode]
+$cenumFromThen :: LogMode -&gt; LogMode -&gt; [LogMode]
+enumFrom :: LogMode -&gt; [LogMode]
+$cenumFrom :: LogMode -&gt; [LogMode]
+fromEnum :: LogMode -&gt; Int
+$cfromEnum :: LogMode -&gt; Int
+toEnum :: Int -&gt; LogMode
+$ctoEnum :: Int -&gt; LogMode
+pred :: LogMode -&gt; LogMode
+$cpred :: LogMode -&gt; LogMode
+succ :: LogMode -&gt; LogMode
+$csucc :: LogMode -&gt; LogMode
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Enum.html#Enum"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Enum</span></a></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span>
+</span><span id="line-55"></span><span>      </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-56"></span><span>      </span><span id="local-6989586621679230367"><span id="local-6989586621679230369"><span class="annot"><span class="annottext">LogMode -&gt; LogMode -&gt; Bool
+(LogMode -&gt; LogMode -&gt; Bool)
+-&gt; (LogMode -&gt; LogMode -&gt; Bool) -&gt; Eq LogMode
+forall (a :: OpticKind).
+(a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: LogMode -&gt; LogMode -&gt; Bool
+$c/= :: LogMode -&gt; LogMode -&gt; Bool
+== :: LogMode -&gt; LogMode -&gt; Bool
+$c== :: LogMode -&gt; LogMode -&gt; Bool
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/ghc-prim-0.8.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span>
+</span><span id="line-57"></span><span>      </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-58"></span><span>      </span><span id="local-6989586621679230347"><span id="local-6989586621679230349"><span id="local-6989586621679230352"><span id="local-6989586621679230355"><span id="local-6989586621679230358"><span id="local-6989586621679230360"><span id="local-6989586621679230362"><span class="annot"><span class="annottext">Eq LogMode
+Eq LogMode
+-&gt; (LogMode -&gt; LogMode -&gt; Ordering)
+-&gt; (LogMode -&gt; LogMode -&gt; Bool)
+-&gt; (LogMode -&gt; LogMode -&gt; Bool)
+-&gt; (LogMode -&gt; LogMode -&gt; Bool)
+-&gt; (LogMode -&gt; LogMode -&gt; Bool)
+-&gt; (LogMode -&gt; LogMode -&gt; LogMode)
+-&gt; (LogMode -&gt; LogMode -&gt; LogMode)
+-&gt; Ord LogMode
+LogMode -&gt; LogMode -&gt; Bool
+LogMode -&gt; LogMode -&gt; Ordering
+LogMode -&gt; LogMode -&gt; LogMode
+forall (a :: OpticKind).
+Eq a
+-&gt; (a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+min :: LogMode -&gt; LogMode -&gt; LogMode
+$cmin :: LogMode -&gt; LogMode -&gt; LogMode
+max :: LogMode -&gt; LogMode -&gt; LogMode
+$cmax :: LogMode -&gt; LogMode -&gt; LogMode
+&gt;= :: LogMode -&gt; LogMode -&gt; Bool
+$c&gt;= :: LogMode -&gt; LogMode -&gt; Bool
+&gt; :: LogMode -&gt; LogMode -&gt; Bool
+$c&gt; :: LogMode -&gt; LogMode -&gt; Bool
+&lt;= :: LogMode -&gt; LogMode -&gt; Bool
+$c&lt;= :: LogMode -&gt; LogMode -&gt; Bool
+&lt; :: LogMode -&gt; LogMode -&gt; Bool
+$c&lt; :: LogMode -&gt; LogMode -&gt; Bool
+compare :: LogMode -&gt; LogMode -&gt; Ordering
+$ccompare :: LogMode -&gt; LogMode -&gt; Ordering
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/ghc-prim-0.8.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span>
+</span><span id="line-59"></span><span>      </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-60"></span><span>      </span><span id="local-6989586621679230340"><span id="local-6989586621679230342"><span id="local-6989586621679230344"><span class="annot"><span class="annottext">Int -&gt; LogMode -&gt; ShowS
+[LogMode] -&gt; ShowS
+LogMode -&gt; [Char]
+(Int -&gt; LogMode -&gt; ShowS)
+-&gt; (LogMode -&gt; [Char]) -&gt; ([LogMode] -&gt; ShowS) -&gt; Show LogMode
+forall (a :: OpticKind).
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; [Char]) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [LogMode] -&gt; ShowS
+$cshowList :: [LogMode] -&gt; ShowS
+show :: LogMode -&gt; [Char]
+$cshow :: LogMode -&gt; [Char]
+showsPrec :: Int -&gt; LogMode -&gt; ShowS
+$cshowsPrec :: Int -&gt; LogMode -&gt; ShowS
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span>
+</span><span id="line-61"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-keyword">deriving</span><span>
+</span><span id="line-63"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-64"></span><span>      </span><span id="local-6989586621679230324"><span id="local-6989586621679230331"><span id="local-6989586621679230337"><span class="annot"><span class="annottext">NonEmpty LogMode -&gt; LogMode
+LogMode -&gt; LogMode -&gt; LogMode
+(LogMode -&gt; LogMode -&gt; LogMode)
+-&gt; (NonEmpty LogMode -&gt; LogMode)
+-&gt; (forall (b :: OpticKind). Integral b =&gt; b -&gt; LogMode -&gt; LogMode)
+-&gt; Semigroup LogMode
+forall (b :: OpticKind). Integral b =&gt; b -&gt; LogMode -&gt; LogMode
+forall (a :: OpticKind).
+(a -&gt; a -&gt; a)
+-&gt; (NonEmpty a -&gt; a)
+-&gt; (forall (b :: OpticKind). Integral b =&gt; b -&gt; a -&gt; a)
+-&gt; Semigroup a
+stimes :: forall (b :: OpticKind). Integral b =&gt; b -&gt; LogMode -&gt; LogMode
+$cstimes :: forall (b :: OpticKind). Integral b =&gt; b -&gt; LogMode -&gt; LogMode
+sconcat :: NonEmpty LogMode -&gt; LogMode
+$csconcat :: NonEmpty LogMode -&gt; LogMode
+&lt;&gt; :: LogMode -&gt; LogMode -&gt; LogMode
+$c&lt;&gt; :: LogMode -&gt; LogMode -&gt; LogMode
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#Semigroup"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Semigroup</span></a></span></span></span></span><span class="hs-special">,</span><span>
+</span><span id="line-65"></span><span>      </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-66"></span><span>      </span><span id="local-6989586621679230300"><span id="local-6989586621679230306"><span id="local-6989586621679230313"><span class="annot"><span class="annottext">Semigroup LogMode
+LogMode
+Semigroup LogMode
+-&gt; LogMode
+-&gt; (LogMode -&gt; LogMode -&gt; LogMode)
+-&gt; ([LogMode] -&gt; LogMode)
+-&gt; Monoid LogMode
+[LogMode] -&gt; LogMode
+LogMode -&gt; LogMode -&gt; LogMode
+forall (a :: OpticKind).
+Semigroup a -&gt; a -&gt; (a -&gt; a -&gt; a) -&gt; ([a] -&gt; a) -&gt; Monoid a
+mconcat :: [LogMode] -&gt; LogMode
+$cmconcat :: [LogMode] -&gt; LogMode
+mappend :: LogMode -&gt; LogMode -&gt; LogMode
+$cmappend :: LogMode -&gt; LogMode -&gt; LogMode
+mempty :: LogMode
+$cmempty :: LogMode
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#Monoid"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Monoid</span></a></span></span></span></span><span>
+</span><span id="line-67"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-68"></span><span>    </span><span class="hs-keyword">via</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Shrun.Data.Supremum.html#Supremum"><span class="hs-identifier hs-type">Supremum</span></a></span><span> </span><span class="annot"><a href="Shrun.Logging.Types.html#LogMode"><span class="hs-identifier hs-type">LogMode</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span class="hs-comment">-- | Determines the logging level.</span><span>
+</span><span id="line-71"></span><span class="hs-comment">--</span><span>
+</span><span id="line-72"></span><span class="hs-comment">-- @since 0.1</span><span>
+</span><span id="line-73"></span><span class="hs-keyword">data</span><span> </span><span id="LogLevel"><span class="annot"><a href="Shrun.Logging.Types.html#LogLevel"><span class="hs-identifier hs-var">LogLevel</span></a></span></span><span>
+</span><span id="line-74"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-75"></span><span>    </span><span id="None"><span class="annot"><a href="Shrun.Logging.Types.html#None"><span class="hs-identifier hs-var">None</span></a></span></span><span>
+</span><span id="line-76"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-77"></span><span>    </span><span id="SubCommand"><span class="annot"><a href="Shrun.Logging.Types.html#SubCommand"><span class="hs-identifier hs-var">SubCommand</span></a></span></span><span>
+</span><span id="line-78"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-79"></span><span>    </span><span id="Debug"><span class="annot"><a href="Shrun.Logging.Types.html#Debug"><span class="hs-identifier hs-var">Debug</span></a></span></span><span>
+</span><span id="line-80"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-81"></span><span>    </span><span id="Info"><span class="annot"><a href="Shrun.Logging.Types.html#Info"><span class="hs-identifier hs-var">Info</span></a></span></span><span>
+</span><span id="line-82"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-83"></span><span>    </span><span id="InfoBlue"><span class="annot"><a href="Shrun.Logging.Types.html#InfoBlue"><span class="hs-identifier hs-var">InfoBlue</span></a></span></span><span>
+</span><span id="line-84"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-85"></span><span>    </span><span id="InfoCyan"><span class="annot"><a href="Shrun.Logging.Types.html#InfoCyan"><span class="hs-identifier hs-var">InfoCyan</span></a></span></span><span>
+</span><span id="line-86"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-87"></span><span>    </span><span id="InfoSuccess"><span class="annot"><a href="Shrun.Logging.Types.html#InfoSuccess"><span class="hs-identifier hs-var">InfoSuccess</span></a></span></span><span>
+</span><span id="line-88"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-89"></span><span>    </span><span id="Warn"><span class="annot"><a href="Shrun.Logging.Types.html#Warn"><span class="hs-identifier hs-var">Warn</span></a></span></span><span>
+</span><span id="line-90"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-91"></span><span>    </span><span id="Error"><span class="annot"><a href="Shrun.Logging.Types.html#Error"><span class="hs-identifier hs-var">Error</span></a></span></span><span>
+</span><span id="line-92"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-93"></span><span>    </span><span id="Fatal"><span class="annot"><a href="Shrun.Logging.Types.html#Fatal"><span class="hs-identifier hs-var">Fatal</span></a></span></span><span>
+</span><span id="line-94"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span>
+</span><span id="line-95"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-96"></span><span>      </span><span id="local-6989586621679230280"><span id="local-6989586621679230282"><span class="annot"><span class="annottext">LogLevel
+LogLevel -&gt; LogLevel -&gt; Bounded LogLevel
+forall (a :: OpticKind). a -&gt; a -&gt; Bounded a
+maxBound :: LogLevel
+$cmaxBound :: LogLevel
+minBound :: LogLevel
+$cminBound :: LogLevel
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Enum.html#Bounded"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Bounded</span></a></span></span></span><span class="hs-special">,</span><span>
+</span><span id="line-97"></span><span>      </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-98"></span><span>      </span><span id="local-6989586621679230243"><span id="local-6989586621679230245"><span id="local-6989586621679230249"><span id="local-6989586621679230252"><span id="local-6989586621679230254"><span id="local-6989586621679230265"><span id="local-6989586621679230271"><span id="local-6989586621679230277"><span class="annot"><span class="annottext">Int -&gt; LogLevel
+LogLevel -&gt; Int
+LogLevel -&gt; [LogLevel]
+LogLevel -&gt; LogLevel
+LogLevel -&gt; LogLevel -&gt; [LogLevel]
+LogLevel -&gt; LogLevel -&gt; LogLevel -&gt; [LogLevel]
+(LogLevel -&gt; LogLevel)
+-&gt; (LogLevel -&gt; LogLevel)
+-&gt; (Int -&gt; LogLevel)
+-&gt; (LogLevel -&gt; Int)
+-&gt; (LogLevel -&gt; [LogLevel])
+-&gt; (LogLevel -&gt; LogLevel -&gt; [LogLevel])
+-&gt; (LogLevel -&gt; LogLevel -&gt; [LogLevel])
+-&gt; (LogLevel -&gt; LogLevel -&gt; LogLevel -&gt; [LogLevel])
+-&gt; Enum LogLevel
+forall (a :: OpticKind).
+(a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Int -&gt; a)
+-&gt; (a -&gt; Int)
+-&gt; (a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; a -&gt; [a])
+-&gt; Enum a
+enumFromThenTo :: LogLevel -&gt; LogLevel -&gt; LogLevel -&gt; [LogLevel]
+$cenumFromThenTo :: LogLevel -&gt; LogLevel -&gt; LogLevel -&gt; [LogLevel]
+enumFromTo :: LogLevel -&gt; LogLevel -&gt; [LogLevel]
+$cenumFromTo :: LogLevel -&gt; LogLevel -&gt; [LogLevel]
+enumFromThen :: LogLevel -&gt; LogLevel -&gt; [LogLevel]
+$cenumFromThen :: LogLevel -&gt; LogLevel -&gt; [LogLevel]
+enumFrom :: LogLevel -&gt; [LogLevel]
+$cenumFrom :: LogLevel -&gt; [LogLevel]
+fromEnum :: LogLevel -&gt; Int
+$cfromEnum :: LogLevel -&gt; Int
+toEnum :: Int -&gt; LogLevel
+$ctoEnum :: Int -&gt; LogLevel
+pred :: LogLevel -&gt; LogLevel
+$cpred :: LogLevel -&gt; LogLevel
+succ :: LogLevel -&gt; LogLevel
+$csucc :: LogLevel -&gt; LogLevel
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Enum.html#Enum"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Enum</span></a></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span>
+</span><span id="line-99"></span><span>      </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-100"></span><span>      </span><span id="local-6989586621679230239"><span id="local-6989586621679230241"><span class="annot"><span class="annottext">LogLevel -&gt; LogLevel -&gt; Bool
+(LogLevel -&gt; LogLevel -&gt; Bool)
+-&gt; (LogLevel -&gt; LogLevel -&gt; Bool) -&gt; Eq LogLevel
+forall (a :: OpticKind).
+(a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: LogLevel -&gt; LogLevel -&gt; Bool
+$c/= :: LogLevel -&gt; LogLevel -&gt; Bool
+== :: LogLevel -&gt; LogLevel -&gt; Bool
+$c== :: LogLevel -&gt; LogLevel -&gt; Bool
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/ghc-prim-0.8.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span>
+</span><span id="line-101"></span><span>      </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-102"></span><span>      </span><span id="local-6989586621679230220"><span id="local-6989586621679230222"><span id="local-6989586621679230225"><span id="local-6989586621679230228"><span id="local-6989586621679230231"><span id="local-6989586621679230233"><span id="local-6989586621679230235"><span class="annot"><span class="annottext">Eq LogLevel
+Eq LogLevel
+-&gt; (LogLevel -&gt; LogLevel -&gt; Ordering)
+-&gt; (LogLevel -&gt; LogLevel -&gt; Bool)
+-&gt; (LogLevel -&gt; LogLevel -&gt; Bool)
+-&gt; (LogLevel -&gt; LogLevel -&gt; Bool)
+-&gt; (LogLevel -&gt; LogLevel -&gt; Bool)
+-&gt; (LogLevel -&gt; LogLevel -&gt; LogLevel)
+-&gt; (LogLevel -&gt; LogLevel -&gt; LogLevel)
+-&gt; Ord LogLevel
+LogLevel -&gt; LogLevel -&gt; Bool
+LogLevel -&gt; LogLevel -&gt; Ordering
+LogLevel -&gt; LogLevel -&gt; LogLevel
+forall (a :: OpticKind).
+Eq a
+-&gt; (a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+min :: LogLevel -&gt; LogLevel -&gt; LogLevel
+$cmin :: LogLevel -&gt; LogLevel -&gt; LogLevel
+max :: LogLevel -&gt; LogLevel -&gt; LogLevel
+$cmax :: LogLevel -&gt; LogLevel -&gt; LogLevel
+&gt;= :: LogLevel -&gt; LogLevel -&gt; Bool
+$c&gt;= :: LogLevel -&gt; LogLevel -&gt; Bool
+&gt; :: LogLevel -&gt; LogLevel -&gt; Bool
+$c&gt; :: LogLevel -&gt; LogLevel -&gt; Bool
+&lt;= :: LogLevel -&gt; LogLevel -&gt; Bool
+$c&lt;= :: LogLevel -&gt; LogLevel -&gt; Bool
+&lt; :: LogLevel -&gt; LogLevel -&gt; Bool
+$c&lt; :: LogLevel -&gt; LogLevel -&gt; Bool
+compare :: LogLevel -&gt; LogLevel -&gt; Ordering
+$ccompare :: LogLevel -&gt; LogLevel -&gt; Ordering
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/ghc-prim-0.8.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span>
+</span><span id="line-103"></span><span>      </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-104"></span><span>      </span><span id="local-6989586621679230214"><span id="local-6989586621679230216"><span id="local-6989586621679230218"><span class="annot"><span class="annottext">Int -&gt; LogLevel -&gt; ShowS
+[LogLevel] -&gt; ShowS
+LogLevel -&gt; [Char]
+(Int -&gt; LogLevel -&gt; ShowS)
+-&gt; (LogLevel -&gt; [Char]) -&gt; ([LogLevel] -&gt; ShowS) -&gt; Show LogLevel
+forall (a :: OpticKind).
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; [Char]) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [LogLevel] -&gt; ShowS
+$cshowList :: [LogLevel] -&gt; ShowS
+show :: LogLevel -&gt; [Char]
+$cshow :: LogLevel -&gt; [Char]
+showsPrec :: Int -&gt; LogLevel -&gt; ShowS
+$cshowsPrec :: Int -&gt; LogLevel -&gt; ShowS
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span>
+</span><span id="line-105"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-106"></span><span>  </span><span class="hs-keyword">deriving</span><span>
+</span><span id="line-107"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-108"></span><span>      </span><span id="local-6989586621679230200"><span id="local-6989586621679230207"><span id="local-6989586621679230212"><span class="annot"><span class="annottext">NonEmpty LogLevel -&gt; LogLevel
+LogLevel -&gt; LogLevel -&gt; LogLevel
+(LogLevel -&gt; LogLevel -&gt; LogLevel)
+-&gt; (NonEmpty LogLevel -&gt; LogLevel)
+-&gt; (forall (b :: OpticKind).
+    Integral b =&gt;
+    b -&gt; LogLevel -&gt; LogLevel)
+-&gt; Semigroup LogLevel
+forall (b :: OpticKind). Integral b =&gt; b -&gt; LogLevel -&gt; LogLevel
+forall (a :: OpticKind).
+(a -&gt; a -&gt; a)
+-&gt; (NonEmpty a -&gt; a)
+-&gt; (forall (b :: OpticKind). Integral b =&gt; b -&gt; a -&gt; a)
+-&gt; Semigroup a
+stimes :: forall (b :: OpticKind). Integral b =&gt; b -&gt; LogLevel -&gt; LogLevel
+$cstimes :: forall (b :: OpticKind). Integral b =&gt; b -&gt; LogLevel -&gt; LogLevel
+sconcat :: NonEmpty LogLevel -&gt; LogLevel
+$csconcat :: NonEmpty LogLevel -&gt; LogLevel
+&lt;&gt; :: LogLevel -&gt; LogLevel -&gt; LogLevel
+$c&lt;&gt; :: LogLevel -&gt; LogLevel -&gt; LogLevel
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#Semigroup"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Semigroup</span></a></span></span></span></span><span class="hs-special">,</span><span>
+</span><span id="line-109"></span><span>      </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-110"></span><span>      </span><span id="local-6989586621679230178"><span id="local-6989586621679230184"><span id="local-6989586621679230190"><span class="annot"><span class="annottext">Semigroup LogLevel
+LogLevel
+Semigroup LogLevel
+-&gt; LogLevel
+-&gt; (LogLevel -&gt; LogLevel -&gt; LogLevel)
+-&gt; ([LogLevel] -&gt; LogLevel)
+-&gt; Monoid LogLevel
+[LogLevel] -&gt; LogLevel
+LogLevel -&gt; LogLevel -&gt; LogLevel
+forall (a :: OpticKind).
+Semigroup a -&gt; a -&gt; (a -&gt; a -&gt; a) -&gt; ([a] -&gt; a) -&gt; Monoid a
+mconcat :: [LogLevel] -&gt; LogLevel
+$cmconcat :: [LogLevel] -&gt; LogLevel
+mappend :: LogLevel -&gt; LogLevel -&gt; LogLevel
+$cmappend :: LogLevel -&gt; LogLevel -&gt; LogLevel
+mempty :: LogLevel
+$cmempty :: LogLevel
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#Monoid"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Monoid</span></a></span></span></span></span><span>
+</span><span id="line-111"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-112"></span><span>    </span><span class="hs-keyword">via</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Shrun.Data.Supremum.html#Supremum"><span class="hs-identifier hs-type">Supremum</span></a></span><span> </span><span class="annot"><a href="Shrun.Logging.Types.html#LogLevel"><span class="hs-identifier hs-type">LogLevel</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-113"></span><span>
+</span><span id="line-114"></span><span class="hs-comment">-- | Determines where the log is sent.</span><span>
+</span><span id="line-115"></span><span class="hs-comment">--</span><span>
+</span><span id="line-116"></span><span class="hs-comment">-- @since 0.1</span><span>
+</span><span id="line-117"></span><span class="hs-keyword">data</span><span> </span><span id="LogDest"><span class="annot"><a href="Shrun.Logging.Types.html#LogDest"><span class="hs-identifier hs-var">LogDest</span></a></span></span><span>
+</span><span id="line-118"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-119"></span><span>    </span><span id="LogConsole"><span class="annot"><a href="Shrun.Logging.Types.html#LogConsole"><span class="hs-identifier hs-var">LogConsole</span></a></span></span><span>
+</span><span id="line-120"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-121"></span><span>    </span><span id="LogFile"><span class="annot"><a href="Shrun.Logging.Types.html#LogFile"><span class="hs-identifier hs-var">LogFile</span></a></span></span><span>
+</span><span id="line-122"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-123"></span><span>    </span><span id="LogBoth"><span class="annot"><a href="Shrun.Logging.Types.html#LogBoth"><span class="hs-identifier hs-var">LogBoth</span></a></span></span><span>
+</span><span id="line-124"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span>
+</span><span id="line-125"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-126"></span><span>      </span><span id="local-6989586621679230166"><span id="local-6989586621679230168"><span class="annot"><span class="annottext">LogDest
+LogDest -&gt; LogDest -&gt; Bounded LogDest
+forall (a :: OpticKind). a -&gt; a -&gt; Bounded a
+maxBound :: LogDest
+$cmaxBound :: LogDest
+minBound :: LogDest
+$cminBound :: LogDest
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Enum.html#Bounded"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Bounded</span></a></span></span></span><span class="hs-special">,</span><span>
+</span><span id="line-127"></span><span>      </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-128"></span><span>      </span><span id="local-6989586621679230129"><span id="local-6989586621679230131"><span id="local-6989586621679230135"><span id="local-6989586621679230138"><span id="local-6989586621679230140"><span id="local-6989586621679230151"><span id="local-6989586621679230157"><span id="local-6989586621679230163"><span class="annot"><span class="annottext">Int -&gt; LogDest
+LogDest -&gt; Int
+LogDest -&gt; [LogDest]
+LogDest -&gt; LogDest
+LogDest -&gt; LogDest -&gt; [LogDest]
+LogDest -&gt; LogDest -&gt; LogDest -&gt; [LogDest]
+(LogDest -&gt; LogDest)
+-&gt; (LogDest -&gt; LogDest)
+-&gt; (Int -&gt; LogDest)
+-&gt; (LogDest -&gt; Int)
+-&gt; (LogDest -&gt; [LogDest])
+-&gt; (LogDest -&gt; LogDest -&gt; [LogDest])
+-&gt; (LogDest -&gt; LogDest -&gt; [LogDest])
+-&gt; (LogDest -&gt; LogDest -&gt; LogDest -&gt; [LogDest])
+-&gt; Enum LogDest
+forall (a :: OpticKind).
+(a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Int -&gt; a)
+-&gt; (a -&gt; Int)
+-&gt; (a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; a -&gt; [a])
+-&gt; Enum a
+enumFromThenTo :: LogDest -&gt; LogDest -&gt; LogDest -&gt; [LogDest]
+$cenumFromThenTo :: LogDest -&gt; LogDest -&gt; LogDest -&gt; [LogDest]
+enumFromTo :: LogDest -&gt; LogDest -&gt; [LogDest]
+$cenumFromTo :: LogDest -&gt; LogDest -&gt; [LogDest]
+enumFromThen :: LogDest -&gt; LogDest -&gt; [LogDest]
+$cenumFromThen :: LogDest -&gt; LogDest -&gt; [LogDest]
+enumFrom :: LogDest -&gt; [LogDest]
+$cenumFrom :: LogDest -&gt; [LogDest]
+fromEnum :: LogDest -&gt; Int
+$cfromEnum :: LogDest -&gt; Int
+toEnum :: Int -&gt; LogDest
+$ctoEnum :: Int -&gt; LogDest
+pred :: LogDest -&gt; LogDest
+$cpred :: LogDest -&gt; LogDest
+succ :: LogDest -&gt; LogDest
+$csucc :: LogDest -&gt; LogDest
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Enum.html#Enum"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Enum</span></a></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span>
+</span><span id="line-129"></span><span>      </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-130"></span><span>      </span><span id="local-6989586621679230125"><span id="local-6989586621679230127"><span class="annot"><span class="annottext">LogDest -&gt; LogDest -&gt; Bool
+(LogDest -&gt; LogDest -&gt; Bool)
+-&gt; (LogDest -&gt; LogDest -&gt; Bool) -&gt; Eq LogDest
+forall (a :: OpticKind).
+(a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: LogDest -&gt; LogDest -&gt; Bool
+$c/= :: LogDest -&gt; LogDest -&gt; Bool
+== :: LogDest -&gt; LogDest -&gt; Bool
+$c== :: LogDest -&gt; LogDest -&gt; Bool
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/ghc-prim-0.8.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span>
+</span><span id="line-131"></span><span>      </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-132"></span><span>      </span><span id="local-6989586621679230106"><span id="local-6989586621679230108"><span id="local-6989586621679230111"><span id="local-6989586621679230114"><span id="local-6989586621679230117"><span id="local-6989586621679230119"><span id="local-6989586621679230121"><span class="annot"><span class="annottext">Eq LogDest
+Eq LogDest
+-&gt; (LogDest -&gt; LogDest -&gt; Ordering)
+-&gt; (LogDest -&gt; LogDest -&gt; Bool)
+-&gt; (LogDest -&gt; LogDest -&gt; Bool)
+-&gt; (LogDest -&gt; LogDest -&gt; Bool)
+-&gt; (LogDest -&gt; LogDest -&gt; Bool)
+-&gt; (LogDest -&gt; LogDest -&gt; LogDest)
+-&gt; (LogDest -&gt; LogDest -&gt; LogDest)
+-&gt; Ord LogDest
+LogDest -&gt; LogDest -&gt; Bool
+LogDest -&gt; LogDest -&gt; Ordering
+LogDest -&gt; LogDest -&gt; LogDest
+forall (a :: OpticKind).
+Eq a
+-&gt; (a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+min :: LogDest -&gt; LogDest -&gt; LogDest
+$cmin :: LogDest -&gt; LogDest -&gt; LogDest
+max :: LogDest -&gt; LogDest -&gt; LogDest
+$cmax :: LogDest -&gt; LogDest -&gt; LogDest
+&gt;= :: LogDest -&gt; LogDest -&gt; Bool
+$c&gt;= :: LogDest -&gt; LogDest -&gt; Bool
+&gt; :: LogDest -&gt; LogDest -&gt; Bool
+$c&gt; :: LogDest -&gt; LogDest -&gt; Bool
+&lt;= :: LogDest -&gt; LogDest -&gt; Bool
+$c&lt;= :: LogDest -&gt; LogDest -&gt; Bool
+&lt; :: LogDest -&gt; LogDest -&gt; Bool
+$c&lt; :: LogDest -&gt; LogDest -&gt; Bool
+compare :: LogDest -&gt; LogDest -&gt; Ordering
+$ccompare :: LogDest -&gt; LogDest -&gt; Ordering
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/ghc-prim-0.8.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span>
+</span><span id="line-133"></span><span>      </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-134"></span><span>      </span><span id="local-6989586621679230100"><span id="local-6989586621679230102"><span id="local-6989586621679230104"><span class="annot"><span class="annottext">Int -&gt; LogDest -&gt; ShowS
+[LogDest] -&gt; ShowS
+LogDest -&gt; [Char]
+(Int -&gt; LogDest -&gt; ShowS)
+-&gt; (LogDest -&gt; [Char]) -&gt; ([LogDest] -&gt; ShowS) -&gt; Show LogDest
+forall (a :: OpticKind).
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; [Char]) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [LogDest] -&gt; ShowS
+$cshowList :: [LogDest] -&gt; ShowS
+show :: LogDest -&gt; [Char]
+$cshow :: LogDest -&gt; [Char]
+showsPrec :: Int -&gt; LogDest -&gt; ShowS
+$cshowsPrec :: Int -&gt; LogDest -&gt; ShowS
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span>
+</span><span id="line-135"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-136"></span><span>  </span><span class="hs-keyword">deriving</span><span>
+</span><span id="line-137"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-138"></span><span>      </span><span id="local-6989586621679230086"><span id="local-6989586621679230093"><span id="local-6989586621679230098"><span class="annot"><span class="annottext">NonEmpty LogDest -&gt; LogDest
+LogDest -&gt; LogDest -&gt; LogDest
+(LogDest -&gt; LogDest -&gt; LogDest)
+-&gt; (NonEmpty LogDest -&gt; LogDest)
+-&gt; (forall (b :: OpticKind). Integral b =&gt; b -&gt; LogDest -&gt; LogDest)
+-&gt; Semigroup LogDest
+forall (b :: OpticKind). Integral b =&gt; b -&gt; LogDest -&gt; LogDest
+forall (a :: OpticKind).
+(a -&gt; a -&gt; a)
+-&gt; (NonEmpty a -&gt; a)
+-&gt; (forall (b :: OpticKind). Integral b =&gt; b -&gt; a -&gt; a)
+-&gt; Semigroup a
+stimes :: forall (b :: OpticKind). Integral b =&gt; b -&gt; LogDest -&gt; LogDest
+$cstimes :: forall (b :: OpticKind). Integral b =&gt; b -&gt; LogDest -&gt; LogDest
+sconcat :: NonEmpty LogDest -&gt; LogDest
+$csconcat :: NonEmpty LogDest -&gt; LogDest
+&lt;&gt; :: LogDest -&gt; LogDest -&gt; LogDest
+$c&lt;&gt; :: LogDest -&gt; LogDest -&gt; LogDest
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#Semigroup"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Semigroup</span></a></span></span></span></span><span class="hs-special">,</span><span>
+</span><span id="line-139"></span><span>      </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-140"></span><span>      </span><span id="local-6989586621679230064"><span id="local-6989586621679230070"><span id="local-6989586621679230076"><span class="annot"><span class="annottext">Semigroup LogDest
+LogDest
+Semigroup LogDest
+-&gt; LogDest
+-&gt; (LogDest -&gt; LogDest -&gt; LogDest)
+-&gt; ([LogDest] -&gt; LogDest)
+-&gt; Monoid LogDest
+[LogDest] -&gt; LogDest
+LogDest -&gt; LogDest -&gt; LogDest
+forall (a :: OpticKind).
+Semigroup a -&gt; a -&gt; (a -&gt; a -&gt; a) -&gt; ([a] -&gt; a) -&gt; Monoid a
+mconcat :: [LogDest] -&gt; LogDest
+$cmconcat :: [LogDest] -&gt; LogDest
+mappend :: LogDest -&gt; LogDest -&gt; LogDest
+$cmappend :: LogDest -&gt; LogDest -&gt; LogDest
+mempty :: LogDest
+$cmempty :: LogDest
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#Monoid"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Monoid</span></a></span></span></span></span><span>
+</span><span id="line-141"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-142"></span><span>    </span><span class="hs-keyword">via</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Shrun.Data.Supremum.html#Supremum"><span class="hs-identifier hs-type">Supremum</span></a></span><span> </span><span class="annot"><a href="Shrun.Logging.Types.html#LogDest"><span class="hs-identifier hs-type">LogDest</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-143"></span><span>
+</span><span id="line-144"></span><span class="hs-comment">-- | Captures the relevant information concerning a specific log</span><span>
+</span><span id="line-145"></span><span class="hs-comment">-- (i.e. text, level, and mode).</span><span>
+</span><span id="line-146"></span><span class="hs-comment">--</span><span>
+</span><span id="line-147"></span><span class="hs-comment">-- @since 0.1</span><span>
+</span><span id="line-148"></span><span class="hs-keyword">data</span><span> </span><span id="Log"><span class="annot"><a href="Shrun.Logging.Types.html#Log"><span class="hs-identifier hs-var">Log</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="MkLog"><span class="annot"><a href="Shrun.Logging.Types.html#MkLog"><span class="hs-identifier hs-var">MkLog</span></a></span></span><span>
+</span><span id="line-149"></span><span>  </span><span class="hs-special">{</span><span> </span><span class="hs-comment">-- | Optional command that produced this log.</span><span>
+</span><span id="line-150"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-151"></span><span>    </span><span class="hs-comment">-- @since 0.1</span><span>
+</span><span id="line-152"></span><span>    </span><span id="%24sel%3Acmd%3AMkLog"><span class="annot"><span class="annottext">Log -&gt; Maybe Command
+</span><a href="Shrun.Logging.Types.html#%24sel%3Acmd%3AMkLog"><span class="hs-identifier hs-var hs-var">cmd</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Shrun.Data.Command.html#Command"><span class="hs-identifier hs-type">Command</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-153"></span><span>    </span><span class="hs-comment">-- | The 'Text' for a given log.</span><span>
+</span><span id="line-154"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-155"></span><span>    </span><span class="hs-comment">-- @since 0.1</span><span>
+</span><span id="line-156"></span><span>    </span><span id="%24sel%3Amsg%3AMkLog"><span class="annot"><span class="annottext">Log -&gt; Text
+</span><a href="Shrun.Logging.Types.html#%24sel%3Amsg%3AMkLog"><span class="hs-identifier hs-var hs-var">msg</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/text-1.2.5.0/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-157"></span><span>    </span><span class="hs-comment">-- | The 'LogLevel' for a given log.</span><span>
+</span><span id="line-158"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-159"></span><span>    </span><span class="hs-comment">-- @since 0.1</span><span>
+</span><span id="line-160"></span><span>    </span><span id="%24sel%3Alvl%3AMkLog"><span class="annot"><span class="annottext">Log -&gt; LogLevel
+</span><a href="Shrun.Logging.Types.html#%24sel%3Alvl%3AMkLog"><span class="hs-identifier hs-var hs-var">lvl</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Shrun.Logging.Types.html#LogLevel"><span class="hs-identifier hs-type">LogLevel</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-161"></span><span>    </span><span class="hs-comment">-- | The 'LogMode' for a given log.</span><span>
+</span><span id="line-162"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-163"></span><span>    </span><span class="hs-comment">-- @since 0.1</span><span>
+</span><span id="line-164"></span><span>    </span><span id="%24sel%3Amode%3AMkLog"><span class="annot"><span class="annottext">Log -&gt; LogMode
+</span><a href="Shrun.Logging.Types.html#%24sel%3Amode%3AMkLog"><span class="hs-identifier hs-var hs-var">mode</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Shrun.Logging.Types.html#LogMode"><span class="hs-identifier hs-type">LogMode</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-165"></span><span>    </span><span class="hs-comment">-- | Where to send this log. Most logs should go to both the console and</span><span>
+</span><span id="line-166"></span><span>    </span><span class="hs-comment">-- the file. For a log to actually be written to a file, 'dest' must be</span><span>
+</span><span id="line-167"></span><span>    </span><span class="hs-comment">-- either 'LogFile' or 'LogBoth' /and/ file logging must be enabled</span><span>
+</span><span id="line-168"></span><span>    </span><span class="hs-comment">-- globally.</span><span>
+</span><span id="line-169"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-170"></span><span>    </span><span class="hs-comment">-- @since 0.1</span><span>
+</span><span id="line-171"></span><span>    </span><span id="%24sel%3Adest%3AMkLog"><span class="annot"><span class="annottext">Log -&gt; LogDest
+</span><a href="Shrun.Logging.Types.html#%24sel%3Adest%3AMkLog"><span class="hs-identifier hs-var hs-var">dest</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Shrun.Logging.Types.html#LogDest"><span class="hs-identifier hs-type">LogDest</span></a></span><span>
+</span><span id="line-172"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-173"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span>
+</span><span id="line-174"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-175"></span><span>      </span><span id="local-6989586621679230038"><span id="local-6989586621679230040"><span id="local-6989586621679230051"><span class="annot"><span class="annottext">Int -&gt; Log -&gt; ShowS
+[Log] -&gt; ShowS
+Log -&gt; [Char]
+(Int -&gt; Log -&gt; ShowS)
+-&gt; (Log -&gt; [Char]) -&gt; ([Log] -&gt; ShowS) -&gt; Show Log
+forall (a :: OpticKind).
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; [Char]) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [Log] -&gt; ShowS
+$cshowList :: [Log] -&gt; ShowS
+show :: Log -&gt; [Char]
+$cshow :: Log -&gt; [Char]
+showsPrec :: Int -&gt; Log -&gt; ShowS
+$cshowsPrec :: Int -&gt; Log -&gt; ShowS
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span>
+</span><span id="line-176"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-177"></span><span>
+</span><span id="line-178"></span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-179"></span><span id="local-6989586621679230012"><span id="local-6989586621679230017"><span id="local-6989586621679230022"><span id="local-6989586621679230027"><span id="local-6989586621679230032"><span id="local-6989586621679230543"><span id="local-6989586621679230544"><span id="local-6989586621679230545"><span id="local-6989586621679230546"><span id="local-6989586621679230547"><span id="local-6989586621679230548"><span id="local-6989586621679230549"><span id="local-6989586621679230550"><span id="local-6989586621679230551"><span id="local-6989586621679230552"><span id="local-6989586621679230553"><span id="local-6989586621679230554"><span id="local-6989586621679230598"><span id="local-6989586621679230599"><span id="local-6989586621679230600"><span class="hs-identifier">makeFieldLabelsNoPrefix</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">Log</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-180"></span><span>
+</span><span id="line-181"></span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-182"></span><span>
+</span><span id="line-183"></span><span class="hs-comment">-- | Transforms log to a color based on its 'LogLevel'.</span><span>
+</span><span id="line-184"></span><span class="hs-comment">--</span><span>
+</span><span id="line-185"></span><span class="hs-comment">-- @since 0.1</span><span>
+</span><span id="line-186"></span><span class="annot"><a href="Shrun.Logging.Types.html#logToColor"><span class="hs-identifier hs-type">logToColor</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Shrun.Logging.Types.html#Log"><span class="hs-identifier hs-type">Log</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/2adzkqwlfywz79bbpv8bs6hyn5ad35dz-pretty-terminal-0.1.0.0-doc/share/doc/pretty-terminal-0.1.0.0/html/src/System.Console.Pretty.html#Color"><span class="hs-identifier hs-type">Color</span></a></span><span>
+</span><span id="line-187"></span><span id="logToColor"><span class="annot"><span class="annottext">logToColor :: Log -&gt; Color
+</span><a href="Shrun.Logging.Types.html#logToColor"><span class="hs-identifier hs-var hs-var">logToColor</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">LogLevel -&gt; Color
+</span><a href="Shrun.Logging.Types.html#levelToColor"><span class="hs-identifier hs-var">levelToColor</span></a></span><span> </span><span class="annot"><span class="annottext">(LogLevel -&gt; Color) -&gt; (Log -&gt; LogLevel) -&gt; Log -&gt; Color
+forall (b :: OpticKind) (c :: OpticKind) (a :: OpticKind).
+(b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic' A_Lens NoIx Log LogLevel -&gt; Log -&gt; LogLevel
+forall (k :: OpticKind) (is :: IxList) (s :: OpticKind)
+       (a :: OpticKind).
+Is k A_Getter =&gt;
+Optic' k is s a -&gt; s -&gt; a
+</span><a href="file:///nix/store/wnx39jjxjr7ivk5xmark8v1f1fl8cmvb-optics-core-0.4.1-doc/share/doc/optics-core-0.4.1/html/src/Optics.Getter.html#view"><span class="hs-identifier hs-var">view</span></a></span><span> </span><span class="annot"><span class="annottext">Optic' A_Lens NoIx Log LogLevel
+</span><span class="">#lvl</span></span><span>
+</span><span id="line-188"></span><span class="hs-pragma">{-# INLINEABLE</span><span> </span><span class="annot"><a href="Shrun.Logging.Types.html#logToColor"><span class="hs-pragma hs-type">logToColor</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-189"></span><span>
+</span><span id="line-190"></span><span class="hs-comment">-- | Transforms log to a prefix based on its 'LogLevel'.</span><span>
+</span><span id="line-191"></span><span class="hs-comment">--</span><span>
+</span><span id="line-192"></span><span class="hs-comment">-- @since 0.1</span><span>
+</span><span id="line-193"></span><span class="annot"><a href="Shrun.Logging.Types.html#logToPrefix"><span class="hs-identifier hs-type">logToPrefix</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Shrun.Logging.Types.html#Log"><span class="hs-identifier hs-type">Log</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/text-1.2.5.0/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-194"></span><span id="logToPrefix"><span class="annot"><span class="annottext">logToPrefix :: Log -&gt; Text
+</span><a href="Shrun.Logging.Types.html#logToPrefix"><span class="hs-identifier hs-var hs-var">logToPrefix</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">LogLevel -&gt; Text
+</span><a href="Shrun.Logging.Types.html#levelToPrefix"><span class="hs-identifier hs-var">levelToPrefix</span></a></span><span> </span><span class="annot"><span class="annottext">(LogLevel -&gt; Text) -&gt; (Log -&gt; LogLevel) -&gt; Log -&gt; Text
+forall (b :: OpticKind) (c :: OpticKind) (a :: OpticKind).
+(b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic' A_Lens NoIx Log LogLevel -&gt; Log -&gt; LogLevel
+forall (k :: OpticKind) (is :: IxList) (s :: OpticKind)
+       (a :: OpticKind).
+Is k A_Getter =&gt;
+Optic' k is s a -&gt; s -&gt; a
+</span><a href="file:///nix/store/wnx39jjxjr7ivk5xmark8v1f1fl8cmvb-optics-core-0.4.1-doc/share/doc/optics-core-0.4.1/html/src/Optics.Getter.html#view"><span class="hs-identifier hs-var">view</span></a></span><span> </span><span class="annot"><span class="annottext">Optic' A_Lens NoIx Log LogLevel
+</span><span class="">#lvl</span></span><span>
+</span><span id="line-195"></span><span class="hs-pragma">{-# INLINEABLE</span><span> </span><span class="annot"><a href="Shrun.Logging.Types.html#logToPrefix"><span class="hs-pragma hs-type">logToPrefix</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-196"></span><span>
+</span><span id="line-197"></span><span class="hs-comment">-- | Maps 'LogLevel' to 'Color'.</span><span>
+</span><span id="line-198"></span><span class="hs-comment">--</span><span>
+</span><span id="line-199"></span><span class="hs-comment">-- @since 0.1</span><span>
+</span><span id="line-200"></span><span class="annot"><a href="Shrun.Logging.Types.html#levelToColor"><span class="hs-identifier hs-type">levelToColor</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Shrun.Logging.Types.html#LogLevel"><span class="hs-identifier hs-type">LogLevel</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/2adzkqwlfywz79bbpv8bs6hyn5ad35dz-pretty-terminal-0.1.0.0-doc/share/doc/pretty-terminal-0.1.0.0/html/src/System.Console.Pretty.html#Color"><span class="hs-identifier hs-type">Color</span></a></span><span>
+</span><span id="line-201"></span><span id="levelToColor"><span class="annot"><span class="annottext">levelToColor :: LogLevel -&gt; Color
+</span><a href="Shrun.Logging.Types.html#levelToColor"><span class="hs-identifier hs-var hs-var">levelToColor</span></a></span></span><span> </span><span class="annot"><span class="annottext">LogLevel
+</span><a href="Shrun.Logging.Types.html#None"><span class="hs-identifier hs-var">None</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Color
+</span><a href="file:///nix/store/2adzkqwlfywz79bbpv8bs6hyn5ad35dz-pretty-terminal-0.1.0.0-doc/share/doc/pretty-terminal-0.1.0.0/html/src/System.Console.Pretty.html#White"><span class="hs-identifier hs-var">P.White</span></a></span><span>
+</span><span id="line-202"></span><span class="annot"><a href="Shrun.Logging.Types.html#levelToColor"><span class="hs-identifier hs-var">levelToColor</span></a></span><span> </span><span class="annot"><span class="annottext">LogLevel
+</span><a href="Shrun.Logging.Types.html#SubCommand"><span class="hs-identifier hs-var">SubCommand</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Color
+</span><a href="file:///nix/store/2adzkqwlfywz79bbpv8bs6hyn5ad35dz-pretty-terminal-0.1.0.0-doc/share/doc/pretty-terminal-0.1.0.0/html/src/System.Console.Pretty.html#White"><span class="hs-identifier hs-var">P.White</span></a></span><span>
+</span><span id="line-203"></span><span class="annot"><a href="Shrun.Logging.Types.html#levelToColor"><span class="hs-identifier hs-var">levelToColor</span></a></span><span> </span><span class="annot"><span class="annottext">LogLevel
+</span><a href="Shrun.Logging.Types.html#Debug"><span class="hs-identifier hs-var">Debug</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Color
+</span><a href="file:///nix/store/2adzkqwlfywz79bbpv8bs6hyn5ad35dz-pretty-terminal-0.1.0.0-doc/share/doc/pretty-terminal-0.1.0.0/html/src/System.Console.Pretty.html#White"><span class="hs-identifier hs-var">P.White</span></a></span><span>
+</span><span id="line-204"></span><span class="annot"><a href="Shrun.Logging.Types.html#levelToColor"><span class="hs-identifier hs-var">levelToColor</span></a></span><span> </span><span class="annot"><span class="annottext">LogLevel
+</span><a href="Shrun.Logging.Types.html#Info"><span class="hs-identifier hs-var">Info</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Color
+</span><a href="file:///nix/store/2adzkqwlfywz79bbpv8bs6hyn5ad35dz-pretty-terminal-0.1.0.0-doc/share/doc/pretty-terminal-0.1.0.0/html/src/System.Console.Pretty.html#Magenta"><span class="hs-identifier hs-var">P.Magenta</span></a></span><span>
+</span><span id="line-205"></span><span class="annot"><a href="Shrun.Logging.Types.html#levelToColor"><span class="hs-identifier hs-var">levelToColor</span></a></span><span> </span><span class="annot"><span class="annottext">LogLevel
+</span><a href="Shrun.Logging.Types.html#InfoBlue"><span class="hs-identifier hs-var">InfoBlue</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Color
+</span><a href="file:///nix/store/2adzkqwlfywz79bbpv8bs6hyn5ad35dz-pretty-terminal-0.1.0.0-doc/share/doc/pretty-terminal-0.1.0.0/html/src/System.Console.Pretty.html#Blue"><span class="hs-identifier hs-var">P.Blue</span></a></span><span>
+</span><span id="line-206"></span><span class="annot"><a href="Shrun.Logging.Types.html#levelToColor"><span class="hs-identifier hs-var">levelToColor</span></a></span><span> </span><span class="annot"><span class="annottext">LogLevel
+</span><a href="Shrun.Logging.Types.html#InfoCyan"><span class="hs-identifier hs-var">InfoCyan</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Color
+</span><a href="file:///nix/store/2adzkqwlfywz79bbpv8bs6hyn5ad35dz-pretty-terminal-0.1.0.0-doc/share/doc/pretty-terminal-0.1.0.0/html/src/System.Console.Pretty.html#Cyan"><span class="hs-identifier hs-var">P.Cyan</span></a></span><span>
+</span><span id="line-207"></span><span class="annot"><a href="Shrun.Logging.Types.html#levelToColor"><span class="hs-identifier hs-var">levelToColor</span></a></span><span> </span><span class="annot"><span class="annottext">LogLevel
+</span><a href="Shrun.Logging.Types.html#InfoSuccess"><span class="hs-identifier hs-var">InfoSuccess</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Color
+</span><a href="file:///nix/store/2adzkqwlfywz79bbpv8bs6hyn5ad35dz-pretty-terminal-0.1.0.0-doc/share/doc/pretty-terminal-0.1.0.0/html/src/System.Console.Pretty.html#Green"><span class="hs-identifier hs-var">P.Green</span></a></span><span>
+</span><span id="line-208"></span><span class="annot"><a href="Shrun.Logging.Types.html#levelToColor"><span class="hs-identifier hs-var">levelToColor</span></a></span><span> </span><span class="annot"><span class="annottext">LogLevel
+</span><a href="Shrun.Logging.Types.html#Warn"><span class="hs-identifier hs-var">Warn</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Color
+</span><a href="file:///nix/store/2adzkqwlfywz79bbpv8bs6hyn5ad35dz-pretty-terminal-0.1.0.0-doc/share/doc/pretty-terminal-0.1.0.0/html/src/System.Console.Pretty.html#Yellow"><span class="hs-identifier hs-var">P.Yellow</span></a></span><span>
+</span><span id="line-209"></span><span class="annot"><a href="Shrun.Logging.Types.html#levelToColor"><span class="hs-identifier hs-var">levelToColor</span></a></span><span> </span><span class="annot"><span class="annottext">LogLevel
+</span><a href="Shrun.Logging.Types.html#Error"><span class="hs-identifier hs-var">Error</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Color
+</span><a href="file:///nix/store/2adzkqwlfywz79bbpv8bs6hyn5ad35dz-pretty-terminal-0.1.0.0-doc/share/doc/pretty-terminal-0.1.0.0/html/src/System.Console.Pretty.html#Red"><span class="hs-identifier hs-var">P.Red</span></a></span><span>
+</span><span id="line-210"></span><span class="annot"><a href="Shrun.Logging.Types.html#levelToColor"><span class="hs-identifier hs-var">levelToColor</span></a></span><span> </span><span class="annot"><span class="annottext">LogLevel
+</span><a href="Shrun.Logging.Types.html#Fatal"><span class="hs-identifier hs-var">Fatal</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Color
+</span><a href="file:///nix/store/2adzkqwlfywz79bbpv8bs6hyn5ad35dz-pretty-terminal-0.1.0.0-doc/share/doc/pretty-terminal-0.1.0.0/html/src/System.Console.Pretty.html#Red"><span class="hs-identifier hs-var">P.Red</span></a></span><span>
+</span><span id="line-211"></span><span class="hs-pragma">{-# INLINEABLE</span><span> </span><span class="annot"><a href="Shrun.Logging.Types.html#levelToColor"><span class="hs-pragma hs-type">levelToColor</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-212"></span><span>
+</span><span id="line-213"></span><span class="hs-comment">-- | Maps 'LogLevel' to \'Prefix\'.</span><span>
+</span><span id="line-214"></span><span class="hs-comment">--</span><span>
+</span><span id="line-215"></span><span class="hs-comment">-- @since 0.1</span><span>
+</span><span id="line-216"></span><span class="annot"><a href="Shrun.Logging.Types.html#levelToPrefix"><span class="hs-identifier hs-type">levelToPrefix</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Shrun.Logging.Types.html#LogLevel"><span class="hs-identifier hs-type">LogLevel</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/text-1.2.5.0/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-217"></span><span id="levelToPrefix"><span class="annot"><span class="annottext">levelToPrefix :: LogLevel -&gt; Text
+</span><a href="Shrun.Logging.Types.html#levelToPrefix"><span class="hs-identifier hs-var hs-var">levelToPrefix</span></a></span></span><span> </span><span class="annot"><span class="annottext">LogLevel
+</span><a href="Shrun.Logging.Types.html#None"><span class="hs-identifier hs-var">None</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&quot;</span></span><span>
+</span><span id="line-218"></span><span class="annot"><a href="Shrun.Logging.Types.html#levelToPrefix"><span class="hs-identifier hs-var">levelToPrefix</span></a></span><span> </span><span class="annot"><span class="annottext">LogLevel
+</span><a href="Shrun.Logging.Types.html#SubCommand"><span class="hs-identifier hs-var">SubCommand</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;[Command] &quot;</span></span><span>
+</span><span id="line-219"></span><span class="annot"><a href="Shrun.Logging.Types.html#levelToPrefix"><span class="hs-identifier hs-var">levelToPrefix</span></a></span><span> </span><span class="annot"><span class="annottext">LogLevel
+</span><a href="Shrun.Logging.Types.html#Debug"><span class="hs-identifier hs-var">Debug</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;[Debug] &quot;</span></span><span>
+</span><span id="line-220"></span><span class="annot"><a href="Shrun.Logging.Types.html#levelToPrefix"><span class="hs-identifier hs-var">levelToPrefix</span></a></span><span> </span><span class="annot"><span class="annottext">LogLevel
+</span><a href="Shrun.Logging.Types.html#Info"><span class="hs-identifier hs-var">Info</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;[Info] &quot;</span></span><span>
+</span><span id="line-221"></span><span class="annot"><a href="Shrun.Logging.Types.html#levelToPrefix"><span class="hs-identifier hs-var">levelToPrefix</span></a></span><span> </span><span class="annot"><span class="annottext">LogLevel
+</span><a href="Shrun.Logging.Types.html#InfoBlue"><span class="hs-identifier hs-var">InfoBlue</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;[Info] &quot;</span></span><span>
+</span><span id="line-222"></span><span class="annot"><a href="Shrun.Logging.Types.html#levelToPrefix"><span class="hs-identifier hs-var">levelToPrefix</span></a></span><span> </span><span class="annot"><span class="annottext">LogLevel
+</span><a href="Shrun.Logging.Types.html#InfoCyan"><span class="hs-identifier hs-var">InfoCyan</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;[Info] &quot;</span></span><span>
+</span><span id="line-223"></span><span class="annot"><a href="Shrun.Logging.Types.html#levelToPrefix"><span class="hs-identifier hs-var">levelToPrefix</span></a></span><span> </span><span class="annot"><span class="annottext">LogLevel
+</span><a href="Shrun.Logging.Types.html#InfoSuccess"><span class="hs-identifier hs-var">InfoSuccess</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;[Info] &quot;</span></span><span>
+</span><span id="line-224"></span><span class="annot"><a href="Shrun.Logging.Types.html#levelToPrefix"><span class="hs-identifier hs-var">levelToPrefix</span></a></span><span> </span><span class="annot"><span class="annottext">LogLevel
+</span><a href="Shrun.Logging.Types.html#Warn"><span class="hs-identifier hs-var">Warn</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;[Warn] &quot;</span></span><span>
+</span><span id="line-225"></span><span class="annot"><a href="Shrun.Logging.Types.html#levelToPrefix"><span class="hs-identifier hs-var">levelToPrefix</span></a></span><span> </span><span class="annot"><span class="annottext">LogLevel
+</span><a href="Shrun.Logging.Types.html#Error"><span class="hs-identifier hs-var">Error</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;[Error] &quot;</span></span><span>
+</span><span id="line-226"></span><span class="annot"><a href="Shrun.Logging.Types.html#levelToPrefix"><span class="hs-identifier hs-var">levelToPrefix</span></a></span><span> </span><span class="annot"><span class="annottext">LogLevel
+</span><a href="Shrun.Logging.Types.html#Fatal"><span class="hs-identifier hs-var">Fatal</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;[Fatal Error] &quot;</span></span><span>
+</span><span id="line-227"></span><span class="hs-pragma">{-# INLINEABLE</span><span> </span><span class="annot"><a href="Shrun.Logging.Types.html#levelToPrefix"><span class="hs-pragma hs-type">levelToPrefix</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-228"></span><span>
+</span><span id="line-229"></span><span class="hs-comment">-- | 'LogText' is a textual representation of a given 'Log'. No coloring</span><span>
+</span><span id="line-230"></span><span class="hs-comment">-- is included, but we include the prefix (e.g. Warn) along with a timestamp.</span><span>
+</span><span id="line-231"></span><span class="hs-comment">--</span><span>
+</span><span id="line-232"></span><span class="hs-comment">-- @since 0.1</span><span>
+</span><span id="line-233"></span><span class="hs-keyword">newtype</span><span> </span><span id="LogText"><span class="annot"><a href="Shrun.Logging.Types.html#LogText"><span class="hs-identifier hs-var">LogText</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="UnsafeLogText"><span class="annot"><a href="Shrun.Logging.Types.html#UnsafeLogText"><span class="hs-identifier hs-var">UnsafeLogText</span></a></span></span><span>
+</span><span id="line-234"></span><span>  </span><span class="hs-special">{</span><span> </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-235"></span><span>    </span><span id="%24sel%3AunLogText%3AUnsafeLogText"><span class="annot"><span class="annottext">LogText -&gt; Text
+</span><a href="Shrun.Logging.Types.html#%24sel%3AunLogText%3AUnsafeLogText"><span class="hs-identifier hs-var hs-var">unLogText</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/text-1.2.5.0/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-236"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-237"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span>
+</span><span id="line-238"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-239"></span><span>      </span><span id="local-6989586621679229923"><span id="local-6989586621679229927"><span class="annot"><span class="annottext">LogText -&gt; LogText -&gt; Bool
+(LogText -&gt; LogText -&gt; Bool)
+-&gt; (LogText -&gt; LogText -&gt; Bool) -&gt; Eq LogText
+forall (a :: OpticKind).
+(a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: LogText -&gt; LogText -&gt; Bool
+$c/= :: LogText -&gt; LogText -&gt; Bool
+== :: LogText -&gt; LogText -&gt; Bool
+$c== :: LogText -&gt; LogText -&gt; Bool
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/ghc-prim-0.8.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span>
+</span><span id="line-240"></span><span>      </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-241"></span><span>      </span><span id="local-6989586621679229915"><span id="local-6989586621679229917"><span id="local-6989586621679229921"><span class="annot"><span class="annottext">Int -&gt; LogText -&gt; ShowS
+[LogText] -&gt; ShowS
+LogText -&gt; [Char]
+(Int -&gt; LogText -&gt; ShowS)
+-&gt; (LogText -&gt; [Char]) -&gt; ([LogText] -&gt; ShowS) -&gt; Show LogText
+forall (a :: OpticKind).
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; [Char]) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [LogText] -&gt; ShowS
+$cshowList :: [LogText] -&gt; ShowS
+show :: LogText -&gt; [Char]
+$cshow :: LogText -&gt; [Char]
+showsPrec :: Int -&gt; LogText -&gt; ShowS
+$cshowsPrec :: Int -&gt; LogText -&gt; ShowS
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span>
+</span><span id="line-242"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-243"></span><span>
+</span><span id="line-244"></span><span class="hs-comment">-- | @since 0.5</span><span>
+</span><span id="line-245"></span><span class="annot"><a href="Shrun.Logging.Types.html#_MkLogText"><span class="hs-identifier hs-type">_MkLogText</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/wnx39jjxjr7ivk5xmark8v1f1fl8cmvb-optics-core-0.4.1-doc/share/doc/optics-core-0.4.1/html/src/Optics.Getter.html#Getter"><span class="hs-identifier hs-type">Getter</span></a></span><span> </span><span class="annot"><a href="Shrun.Logging.Types.html#LogText"><span class="hs-identifier hs-type">LogText</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/text-1.2.5.0/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-246"></span><span id="_MkLogText"><span class="annot"><span class="annottext">_MkLogText :: Getter LogText Text
+</span><a href="Shrun.Logging.Types.html#_MkLogText"><span class="hs-identifier hs-var hs-var">_MkLogText</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(LogText -&gt; Text) -&gt; Getter LogText Text
+forall (s :: OpticKind) (a :: OpticKind). (s -&gt; a) -&gt; Getter s a
+</span><a href="file:///nix/store/wnx39jjxjr7ivk5xmark8v1f1fl8cmvb-optics-core-0.4.1-doc/share/doc/optics-core-0.4.1/html/src/Optics.Getter.html#to"><span class="hs-identifier hs-var">to</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><a href="Shrun.Logging.Types.html#MkLogText"><span class="hs-identifier hs-type">MkLogText</span></a></span><span> </span><span id="local-6989586621679229913"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679229913"><span class="hs-identifier hs-var">t</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679229913"><span class="hs-identifier hs-var">t</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-247"></span><span>
+</span><span id="line-248"></span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-249"></span><span class="hs-keyword">pattern</span><span> </span><span class="annot"><a href="Shrun.Logging.Types.html#MkLogText"><span class="hs-identifier hs-type">MkLogText</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/text-1.2.5.0/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Shrun.Logging.Types.html#LogText"><span class="hs-identifier hs-type">LogText</span></a></span><span>
+</span><span id="line-250"></span><span class="hs-keyword">pattern</span><span> </span><span id="%24mMkLogText"><span id="MkLogText"><span class="annot"><span class="annottext">$mMkLogText :: forall {r}. LogText -&gt; (Text -&gt; r) -&gt; ((# #) -&gt; r) -&gt; r
+</span><a href="Shrun.Logging.Types.html#%24mMkLogText"><span class="hs-identifier hs-var hs-var">MkLogText</span></a></span></span></span><span> </span><span class="annot"><a href="#local-6989586621679229911"><span class="hs-identifier hs-type">t</span></a></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><a href="Shrun.Logging.Types.html#UnsafeLogText"><span class="hs-identifier hs-type">UnsafeLogText</span></a></span><span> </span><span id="local-6989586621679229911"><span class="annot"><a href="#local-6989586621679229911"><span class="hs-identifier hs-var">t</span></a></span></span><span>
+</span><span id="line-251"></span><span>
+</span><span id="line-252"></span><span class="hs-pragma">{-# COMPLETE</span><span> </span><span class="annot"><a href="Shrun.Logging.Types.html#MkLogText"><span class="hs-pragma hs-type">MkLogText</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-253"></span><span>
+</span><span id="line-254"></span><span class="hs-comment">-- | Newtype wrapper over a 'TBQueue'.</span><span>
+</span><span id="line-255"></span><span class="hs-comment">--</span><span>
+</span><span id="line-256"></span><span class="hs-comment">-- @since 0.1</span><span>
+</span><span id="line-257"></span><span class="hs-keyword">newtype</span><span> </span><span id="LogTextQueue"><span class="annot"><a href="Shrun.Logging.Types.html#LogTextQueue"><span class="hs-identifier hs-var">LogTextQueue</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="MkLogTextQueue"><span class="annot"><a href="Shrun.Logging.Types.html#MkLogTextQueue"><span class="hs-identifier hs-var">MkLogTextQueue</span></a></span></span><span>
+</span><span id="line-258"></span><span>  </span><span class="hs-special">{</span><span> </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-259"></span><span>    </span><span id="%24sel%3AgetLogTextQueue%3AMkLogTextQueue"><span class="annot"><span class="annottext">LogTextQueue -&gt; TBQueue LogText
+</span><a href="Shrun.Logging.Types.html#%24sel%3AgetLogTextQueue%3AMkLogTextQueue"><span class="hs-identifier hs-var hs-var">getLogTextQueue</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/stm-2.5.0.2/src/Control.Concurrent.STM.TBQueue.html#TBQueue"><span class="hs-identifier hs-type">TBQueue</span></a></span><span> </span><span class="annot"><a href="Shrun.Logging.Types.html#LogText"><span class="hs-identifier hs-type">LogText</span></a></span><span>
+</span><span id="line-260"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-261"></span><span>
+</span><span id="line-262"></span><span class="hs-comment">-- | @since 0.5</span><span>
+</span><span id="line-263"></span><span id="_MkLogTextQueue"><span class="hs-identifier">makePrisms</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">LogTextQueue</span></span><span>
+</span><span id="line-264"></span><span>
+</span><span id="line-265"></span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-266"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679229903"><span id="local-6989586621679229906"><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="annot"><a href="Shrun.Logging.Types.html#LogTextQueue"><span class="hs-identifier hs-type">LogTextQueue</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-267"></span><span>  </span><span id="local-6989586621679229902"><span class="annot"><span class="annottext">show :: LogTextQueue -&gt; [Char]
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var hs-var hs-var hs-var">show</span></a></span></span><span> </span><span class="annot"><span class="annottext">LogTextQueue
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;&lt;MkLogTextQueue&gt;&quot;</span></span><span>
+</span><span id="line-268"></span><span>  </span><span class="hs-pragma">{-# INLINEABLE</span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Show.html#show"><span class="hs-pragma hs-type">show</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-269"></span></pre></body></html>

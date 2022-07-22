@@ -1,0 +1,444 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-comment">-- | Provides types for the legend functionality.</span><span>
+</span><span id="line-2"></span><span class="hs-comment">--</span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- @since 0.5</span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Shrun.Configuration.Legend</span><span>
+</span><span id="line-5"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-comment">-- * Parsing</span></span><span>
+</span><span id="line-6"></span><span>    </span><span class="annot"><a href="Shrun.Configuration.Legend.html#linesToMap"><span class="hs-identifier">linesToMap</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-7"></span><span>    </span><span class="annot"><a href="Shrun.Data.Legend.html#LegendMap"><span class="hs-identifier">LegendMap</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span>    </span><span class="annot"><a href="Shrun.Configuration.Legend.html#DuplicateKeyError"><span class="hs-identifier">DuplicateKeyError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Translation</span></span><span>
+</span><span id="line-11"></span><span>    </span><span class="annot"><a href="Shrun.Configuration.Legend.html#translateCommands"><span class="hs-identifier">translateCommands</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>    </span><span class="annot"><a href="Shrun.Configuration.Legend.html#CyclicKeyError"><span class="hs-identifier">CyclicKeyError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.HashMap.Strict</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.HashSet</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Set</span></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/text-1.2.5.0/src/Data.Text.Lazy.html"><span class="hs-identifier">Data.Text.Lazy</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">LazyT</span></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/text-1.2.5.0/src/Data.Text.Lazy.Builder.html"><span class="hs-identifier">Data.Text.Lazy.Builder</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/text-1.2.5.0/src/Data.Text.Internal.Builder.html#Builder"><span class="hs-identifier">Builder</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/text-1.2.5.0/src/Data.Text.Lazy.Builder.html"><span class="hs-identifier">Data.Text.Lazy.Builder</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">LTBuilder</span></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Shrun.Data.Command.html"><span class="hs-identifier">Shrun.Data.Command</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Shrun.Data.Command.html#Command"><span class="hs-identifier">Command</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Shrun.Data.Legend.html"><span class="hs-identifier">Shrun.Data.Legend</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Shrun.Data.Legend.html#KeyVal"><span class="hs-identifier">KeyVal</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Shrun.Data.Legend.html#LegendMap"><span class="hs-identifier">LegendMap</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Shrun.Data.NonEmptySeq.html"><span class="hs-identifier">Shrun.Data.NonEmptySeq</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Shrun.Data.NonEmptySeq.html#NonEmptySeq"><span class="hs-identifier">NonEmptySeq</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Shrun.Data.NonEmptySeq.html"><span class="hs-identifier">Shrun.Data.NonEmptySeq</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">NESeq</span></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Shrun.Prelude.html"><span class="hs-identifier">Shrun.Prelude</span></a></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Shrun.Utils.html"><span class="hs-identifier">Shrun.Utils</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">U</span></span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-comment">-- | Errors when parsing the legend.</span><span>
+</span><span id="line-29"></span><span class="hs-comment">--</span><span>
+</span><span id="line-30"></span><span class="hs-comment">-- @since 0.5</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">newtype</span><span> </span><span id="DuplicateKeyError"><span class="annot"><a href="Shrun.Configuration.Legend.html#DuplicateKeyError"><span class="hs-identifier hs-var">DuplicateKeyError</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="MkDuplicateKeyError"><span class="annot"><a href="Shrun.Configuration.Legend.html#MkDuplicateKeyError"><span class="hs-identifier hs-var">MkDuplicateKeyError</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/text-1.2.5.0/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span>
+</span><span id="line-33"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="hs-comment">-- | @since 0.5</span><span>
+</span><span id="line-34"></span><span>      </span><span id="local-6989586621679236090"><span id="local-6989586621679236093"><span class="annot"><span class="annottext">DuplicateKeyError -&gt; DuplicateKeyError -&gt; Bool
+(DuplicateKeyError -&gt; DuplicateKeyError -&gt; Bool)
+-&gt; (DuplicateKeyError -&gt; DuplicateKeyError -&gt; Bool)
+-&gt; Eq DuplicateKeyError
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: DuplicateKeyError -&gt; DuplicateKeyError -&gt; Bool
+$c/= :: DuplicateKeyError -&gt; DuplicateKeyError -&gt; Bool
+== :: DuplicateKeyError -&gt; DuplicateKeyError -&gt; Bool
+$c== :: DuplicateKeyError -&gt; DuplicateKeyError -&gt; Bool
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/ghc-prim-0.8.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span>
+</span><span id="line-35"></span><span>      </span><span class="hs-comment">-- | @since 0.5</span><span>
+</span><span id="line-36"></span><span>      </span><span id="local-6989586621679236079"><span id="local-6989586621679236081"><span id="local-6989586621679236087"><span class="annot"><span class="annottext">Int -&gt; DuplicateKeyError -&gt; ShowS
+[DuplicateKeyError] -&gt; ShowS
+DuplicateKeyError -&gt; String
+(Int -&gt; DuplicateKeyError -&gt; ShowS)
+-&gt; (DuplicateKeyError -&gt; String)
+-&gt; ([DuplicateKeyError] -&gt; ShowS)
+-&gt; Show DuplicateKeyError
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [DuplicateKeyError] -&gt; ShowS
+$cshowList :: [DuplicateKeyError] -&gt; ShowS
+show :: DuplicateKeyError -&gt; String
+$cshow :: DuplicateKeyError -&gt; String
+showsPrec :: Int -&gt; DuplicateKeyError -&gt; ShowS
+$cshowsPrec :: Int -&gt; DuplicateKeyError -&gt; ShowS
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span>
+</span><span id="line-37"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="hs-comment">-- | @since 0.5</span><span>
+</span><span id="line-40"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679236070"><span id="local-6989586621679236072"><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Exception.Type.html#Exception"><span class="hs-identifier hs-type">Exception</span></a></span><span> </span><span class="annot"><a href="Shrun.Configuration.Legend.html#DuplicateKeyError"><span class="hs-identifier hs-type">DuplicateKeyError</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-41"></span><span>  </span><span id="local-6989586621679236062"><span class="annot"><span class="annottext">displayException :: DuplicateKeyError -&gt; String
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Exception.Type.html#displayException"><span class="hs-identifier hs-var hs-var hs-var hs-var">displayException</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Shrun.Configuration.Legend.html#MkDuplicateKeyError"><span class="hs-identifier hs-type">MkDuplicateKeyError</span></a></span><span> </span><span id="local-6989586621679236060"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679236060"><span class="hs-identifier hs-var">k</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Legend error: found duplicate key: &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; String
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/text-1.2.5.0/src/Data.Text.Show.html#unpack"><span class="hs-identifier hs-var">unpack</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679236060"><span class="hs-identifier hs-var">k</span></a></span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="hs-comment">-- | Attempts to parse the given ['KeyVal'] into 'LegendMap'.</span><span>
+</span><span id="line-44"></span><span class="hs-comment">-- Duplicate keys are not allowed.</span><span>
+</span><span id="line-45"></span><span class="hs-comment">--</span><span>
+</span><span id="line-46"></span><span class="hs-comment">-- @since 0.1</span><span>
+</span><span id="line-47"></span><span class="annot"><a href="Shrun.Configuration.Legend.html#linesToMap"><span class="hs-identifier hs-type">linesToMap</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Shrun.Prelude.html#List"><span class="hs-identifier hs-type">List</span></a></span><span> </span><span class="annot"><a href="Shrun.Data.Legend.html#KeyVal"><span class="hs-identifier hs-type">KeyVal</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="Shrun.Configuration.Legend.html#DuplicateKeyError"><span class="hs-identifier hs-type">DuplicateKeyError</span></a></span><span> </span><span class="annot"><a href="Shrun.Data.Legend.html#LegendMap"><span class="hs-identifier hs-type">LegendMap</span></a></span><span>
+</span><span id="line-48"></span><span id="linesToMap"><span class="annot"><span class="annottext">linesToMap :: List KeyVal -&gt; Either DuplicateKeyError LegendMap
+</span><a href="Shrun.Configuration.Legend.html#linesToMap"><span class="hs-identifier hs-var hs-var">linesToMap</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(KeyVal
+ -&gt; Either DuplicateKeyError LegendMap
+ -&gt; Either DuplicateKeyError LegendMap)
+-&gt; Either DuplicateKeyError LegendMap
+-&gt; List KeyVal
+-&gt; Either DuplicateKeyError LegendMap
+forall (t :: Type -&gt; Type) a b.
+Foldable t =&gt;
+(a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/Data.Foldable.html#foldr"><span class="hs-identifier hs-var">foldr</span></a></span><span> </span><span class="annot"><span class="annottext">KeyVal
+-&gt; Either DuplicateKeyError LegendMap
+-&gt; Either DuplicateKeyError LegendMap
+</span><a href="#local-6989586621679236057"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LegendMap -&gt; Either DuplicateKeyError LegendMap
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="annot"><span class="annottext">LegendMap
+forall k v. HashMap k v
+</span><span class="hs-identifier hs-var">Map.empty</span></span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-50"></span><span>    </span><span id="local-6989586621679236057"><span class="annot"><span class="annottext">f :: KeyVal
+-&gt; Either DuplicateKeyError LegendMap
+-&gt; Either DuplicateKeyError LegendMap
+</span><a href="#local-6989586621679236057"><span class="hs-identifier hs-var hs-var">f</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Shrun.Data.Legend.html#MkKeyVal"><span class="hs-identifier hs-type">MkKeyVal</span></a></span><span> </span><span id="local-6989586621679236051"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679236051"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679236050"><span class="annot"><span class="annottext">NonEmptySeq Text
+</span><a href="#local-6989586621679236050"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679236049"><span class="annot"><span class="annottext">Either DuplicateKeyError LegendMap
+</span><a href="#local-6989586621679236049"><span class="hs-identifier hs-var">mp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Either DuplicateKeyError (Either DuplicateKeyError LegendMap)
+-&gt; Either DuplicateKeyError LegendMap
+forall (m :: Type -&gt; Type) a. Monad m =&gt; m (m a) -&gt; m a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#join"><span class="hs-identifier hs-var">join</span></a></span><span> </span><span class="annot"><span class="annottext">(Either DuplicateKeyError (Either DuplicateKeyError LegendMap)
+ -&gt; Either DuplicateKeyError LegendMap)
+-&gt; Either DuplicateKeyError (Either DuplicateKeyError LegendMap)
+-&gt; Either DuplicateKeyError LegendMap
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">((Text, NonEmptySeq Text)
+ -&gt; LegendMap -&gt; Either DuplicateKeyError LegendMap)
+-&gt; Either DuplicateKeyError (Text, NonEmptySeq Text)
+-&gt; Either DuplicateKeyError LegendMap
+-&gt; Either DuplicateKeyError (Either DuplicateKeyError LegendMap)
+forall (f :: Type -&gt; Type) a b c.
+Applicative f =&gt;
+(a -&gt; b -&gt; c) -&gt; f a -&gt; f b -&gt; f c
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#liftA2"><span class="hs-identifier hs-var">liftA2</span></a></span><span> </span><span class="annot"><span class="annottext">(Text, NonEmptySeq Text)
+-&gt; LegendMap -&gt; Either DuplicateKeyError LegendMap
+forall {v}.
+(Text, v)
+-&gt; HashMap Text v -&gt; Either DuplicateKeyError (HashMap Text v)
+</span><a href="#local-6989586621679236047"><span class="hs-identifier hs-var">insertPair</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Text, NonEmptySeq Text)
+-&gt; Either DuplicateKeyError (Text, NonEmptySeq Text)
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679236051"><span class="hs-identifier hs-var">k</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">NonEmptySeq Text
+</span><a href="#local-6989586621679236050"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Either DuplicateKeyError LegendMap
+</span><a href="#local-6989586621679236049"><span class="hs-identifier hs-var">mp</span></a></span><span>
+</span><span id="line-51"></span><span>    </span><span id="local-6989586621679236047"><span class="annot"><span class="annottext">insertPair :: (Text, v)
+-&gt; HashMap Text v -&gt; Either DuplicateKeyError (HashMap Text v)
+</span><a href="#local-6989586621679236047"><span class="hs-identifier hs-var hs-var">insertPair</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679236042"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679236042"><span class="hs-identifier hs-var">key</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679236041"><span class="annot"><span class="annottext">v
+</span><a href="#local-6989586621679236041"><span class="hs-identifier hs-var">cmd</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679236040"><span class="annot"><span class="annottext">HashMap Text v
+</span><a href="#local-6989586621679236040"><span class="hs-identifier hs-var">mp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-52"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Text -&gt; HashMap Text v -&gt; Maybe v
+forall k v. (Eq k, Hashable k) =&gt; k -&gt; HashMap k v -&gt; Maybe v
+</span><span class="hs-identifier hs-var">Map.lookup</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679236042"><span class="hs-identifier hs-var">key</span></a></span><span> </span><span class="annot"><span class="annottext">HashMap Text v
+</span><a href="#local-6989586621679236040"><span class="hs-identifier hs-var">mp</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-53"></span><span>        </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="annot"><span class="annottext">v
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">DuplicateKeyError -&gt; Either DuplicateKeyError (HashMap Text v)
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">(DuplicateKeyError -&gt; Either DuplicateKeyError (HashMap Text v))
+-&gt; DuplicateKeyError -&gt; Either DuplicateKeyError (HashMap Text v)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; DuplicateKeyError
+</span><a href="Shrun.Configuration.Legend.html#MkDuplicateKeyError"><span class="hs-identifier hs-var">MkDuplicateKeyError</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679236042"><span class="hs-identifier hs-var">key</span></a></span><span>
+</span><span id="line-54"></span><span>        </span><span class="annot"><span class="annottext">Maybe v
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">HashMap Text v -&gt; Either DuplicateKeyError (HashMap Text v)
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="annot"><span class="annottext">(HashMap Text v -&gt; Either DuplicateKeyError (HashMap Text v))
+-&gt; HashMap Text v -&gt; Either DuplicateKeyError (HashMap Text v)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; v -&gt; HashMap Text v -&gt; HashMap Text v
+forall k v.
+(Eq k, Hashable k) =&gt;
+k -&gt; v -&gt; HashMap k v -&gt; HashMap k v
+</span><span class="hs-identifier hs-var">Map.insert</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679236042"><span class="hs-identifier hs-var">key</span></a></span><span> </span><span class="annot"><span class="annottext">v
+</span><a href="#local-6989586621679236041"><span class="hs-identifier hs-var">cmd</span></a></span><span> </span><span class="annot"><span class="annottext">HashMap Text v
+</span><a href="#local-6989586621679236040"><span class="hs-identifier hs-var">mp</span></a></span><span>
+</span><span id="line-55"></span><span>
+</span><span id="line-56"></span><span class="hs-comment">-- | @since 0.5</span><span>
+</span><span id="line-57"></span><span class="hs-keyword">newtype</span><span> </span><span id="CyclicKeyError"><span class="annot"><a href="Shrun.Configuration.Legend.html#CyclicKeyError"><span class="hs-identifier hs-var">CyclicKeyError</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="MkCyclicKeyError"><span class="annot"><a href="Shrun.Configuration.Legend.html#MkCyclicKeyError"><span class="hs-identifier hs-var">MkCyclicKeyError</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/text-1.2.5.0/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-58"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span>
+</span><span id="line-59"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="hs-comment">-- | @since 0.5</span><span>
+</span><span id="line-60"></span><span>      </span><span id="local-6989586621679236032"><span id="local-6989586621679236035"><span class="annot"><span class="annottext">CyclicKeyError -&gt; CyclicKeyError -&gt; Bool
+(CyclicKeyError -&gt; CyclicKeyError -&gt; Bool)
+-&gt; (CyclicKeyError -&gt; CyclicKeyError -&gt; Bool) -&gt; Eq CyclicKeyError
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: CyclicKeyError -&gt; CyclicKeyError -&gt; Bool
+$c/= :: CyclicKeyError -&gt; CyclicKeyError -&gt; Bool
+== :: CyclicKeyError -&gt; CyclicKeyError -&gt; Bool
+$c== :: CyclicKeyError -&gt; CyclicKeyError -&gt; Bool
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/ghc-prim-0.8.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span>
+</span><span id="line-61"></span><span>      </span><span class="hs-comment">-- | @since 0.5</span><span>
+</span><span id="line-62"></span><span>      </span><span id="local-6989586621679236024"><span id="local-6989586621679236026"><span id="local-6989586621679236030"><span class="annot"><span class="annottext">Int -&gt; CyclicKeyError -&gt; ShowS
+[CyclicKeyError] -&gt; ShowS
+CyclicKeyError -&gt; String
+(Int -&gt; CyclicKeyError -&gt; ShowS)
+-&gt; (CyclicKeyError -&gt; String)
+-&gt; ([CyclicKeyError] -&gt; ShowS)
+-&gt; Show CyclicKeyError
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [CyclicKeyError] -&gt; ShowS
+$cshowList :: [CyclicKeyError] -&gt; ShowS
+show :: CyclicKeyError -&gt; String
+$cshow :: CyclicKeyError -&gt; String
+showsPrec :: Int -&gt; CyclicKeyError -&gt; ShowS
+$cshowsPrec :: Int -&gt; CyclicKeyError -&gt; ShowS
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span>
+</span><span id="line-63"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span>
+</span><span id="line-65"></span><span class="hs-comment">-- | @since 0.5</span><span>
+</span><span id="line-66"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679236016"><span id="local-6989586621679236018"><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Exception.Type.html#Exception"><span class="hs-identifier hs-type">Exception</span></a></span><span> </span><span class="annot"><a href="Shrun.Configuration.Legend.html#CyclicKeyError"><span class="hs-identifier hs-type">CyclicKeyError</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-67"></span><span>  </span><span id="local-6989586621679236011"><span class="annot"><span class="annottext">displayException :: CyclicKeyError -&gt; String
+</span><a href="#local-6989586621679236011"><span class="hs-identifier hs-var hs-var hs-var hs-var">displayException</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Shrun.Configuration.Legend.html#MkCyclicKeyError"><span class="hs-identifier hs-type">MkCyclicKeyError</span></a></span><span> </span><span id="local-6989586621679236010"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679236010"><span class="hs-identifier hs-var">path</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-68"></span><span>    </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Encountered cyclic definitions when translating commands: &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; String
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/text-1.2.5.0/src/Data.Text.Show.html#unpack"><span class="hs-identifier hs-var">unpack</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679236010"><span class="hs-identifier hs-var">path</span></a></span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span class="hs-comment">-- | Returns a list of 'Text' commands, potentially transforming a</span><span>
+</span><span id="line-71"></span><span class="hs-comment">-- given string via the `LegendMap` @legend@.</span><span>
+</span><span id="line-72"></span><span class="hs-comment">--</span><span>
+</span><span id="line-73"></span><span class="hs-comment">-- Given a command string /s/, we first check if /s/ exists as a key in</span><span>
+</span><span id="line-74"></span><span class="hs-comment">-- @legend@. If it does not, we return /s/. If there is a key matching</span><span>
+</span><span id="line-75"></span><span class="hs-comment">-- /s/, i.e.,</span><span>
+</span><span id="line-76"></span><span class="hs-comment">--</span><span>
+</span><span id="line-77"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-78"></span><span class="hs-comment">-- legend = fromList [...,(s, v),...]</span><span>
+</span><span id="line-79"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-80"></span><span class="hs-comment">--</span><span>
+</span><span id="line-81"></span><span class="hs-comment">-- where \(v = v_1,,\ldots,,v_n\), then we recursively search on each</span><span>
+</span><span id="line-82"></span><span class="hs-comment">-- \(v_i\). We stop and return \(v_i\) when it does not exist as a key in the</span><span>
+</span><span id="line-83"></span><span class="hs-comment">-- map.</span><span>
+</span><span id="line-84"></span><span class="hs-comment">--</span><span>
+</span><span id="line-85"></span><span class="hs-comment">-- ==== __Examples__</span><span>
+</span><span id="line-86"></span><span class="hs-comment">-- &gt;&gt;&gt; import Shrun.Data.NonEmptySeq (unsafeFromList, singleton)</span><span>
+</span><span id="line-87"></span><span class="hs-comment">-- &gt;&gt;&gt; :{</span><span>
+</span><span id="line-88"></span><span class="hs-comment">--   let m = Map.fromList</span><span>
+</span><span id="line-89"></span><span class="hs-comment">--         [ (&quot;cmd1&quot;, singleton &quot;one&quot;),</span><span>
+</span><span id="line-90"></span><span class="hs-comment">--           (&quot;cmd2&quot;, singleton &quot;two&quot;),</span><span>
+</span><span id="line-91"></span><span class="hs-comment">--           (&quot;all&quot;, unsafeFromList [&quot;cmd1&quot;,&quot;cmd2&quot;,&quot;other&quot;])</span><span>
+</span><span id="line-92"></span><span class="hs-comment">--         ]</span><span>
+</span><span id="line-93"></span><span class="hs-comment">--       cmds = translateCommands m (unsafeFromList [&quot;all&quot;, &quot;blah&quot;])</span><span>
+</span><span id="line-94"></span><span class="hs-comment">--   in (fmap . fmap) (view #command) cmds</span><span>
+</span><span id="line-95"></span><span class="hs-comment">-- :}</span><span>
+</span><span id="line-96"></span><span class="hs-comment">-- Right (&quot;one&quot; :|^ fromList [&quot;two&quot;,&quot;other&quot;,&quot;blah&quot;])</span><span>
+</span><span id="line-97"></span><span class="hs-comment">--</span><span>
+</span><span id="line-98"></span><span class="hs-comment">-- Note: If -- when looking up a line -- we detect a cycle, then a 'CyclicKeyErr'</span><span>
+</span><span id="line-99"></span><span class="hs-comment">-- will be returned.</span><span>
+</span><span id="line-100"></span><span class="hs-comment">--</span><span>
+</span><span id="line-101"></span><span class="hs-comment">-- &gt;&gt;&gt; :{</span><span>
+</span><span id="line-102"></span><span class="hs-comment">--   let m = Map.fromList</span><span>
+</span><span id="line-103"></span><span class="hs-comment">--         [ (&quot;a&quot;, singleton &quot;b&quot;),</span><span>
+</span><span id="line-104"></span><span class="hs-comment">--           (&quot;b&quot;, singleton &quot;c&quot;),</span><span>
+</span><span id="line-105"></span><span class="hs-comment">--           (&quot;c&quot;, singleton &quot;a&quot;)</span><span>
+</span><span id="line-106"></span><span class="hs-comment">--         ]</span><span>
+</span><span id="line-107"></span><span class="hs-comment">--   in translateCommands m (singleton &quot;a&quot;)</span><span>
+</span><span id="line-108"></span><span class="hs-comment">-- :}</span><span>
+</span><span id="line-109"></span><span class="hs-comment">-- Left (MkCyclicKeyError &quot;a -&gt; b -&gt; c -&gt; a&quot;)</span><span>
+</span><span id="line-110"></span><span class="hs-comment">--</span><span>
+</span><span id="line-111"></span><span class="hs-comment">-- @since 0.1</span><span>
+</span><span id="line-112"></span><span class="annot"><a href="Shrun.Configuration.Legend.html#translateCommands"><span class="hs-identifier hs-type">translateCommands</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Shrun.Data.Legend.html#LegendMap"><span class="hs-identifier hs-type">LegendMap</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Shrun.Data.NonEmptySeq.html#NonEmptySeq"><span class="hs-identifier hs-type">NonEmptySeq</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/text-1.2.5.0/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="Shrun.Configuration.Legend.html#CyclicKeyError"><span class="hs-identifier hs-type">CyclicKeyError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Shrun.Data.NonEmptySeq.html#NonEmptySeq"><span class="hs-identifier hs-type">NonEmptySeq</span></a></span><span> </span><span class="annot"><a href="Shrun.Data.Command.html#Command"><span class="hs-identifier hs-type">Command</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-113"></span><span id="translateCommands"><span class="annot"><span class="annottext">translateCommands :: LegendMap
+-&gt; NonEmptySeq Text -&gt; Either CyclicKeyError (NonEmptySeq Command)
+</span><a href="Shrun.Configuration.Legend.html#translateCommands"><span class="hs-identifier hs-var hs-var">translateCommands</span></a></span></span><span> </span><span id="local-6989586621679236009"><span class="annot"><span class="annottext">LegendMap
+</span><a href="#local-6989586621679236009"><span class="hs-identifier hs-var">mp</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679236008"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679236008"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="annot"><a href="Shrun.Data.NonEmptySeq.html#%3A%7C%5E"><span class="hs-operator hs-type">:|^</span></a></span><span> </span><span id="local-6989586621679236006"><span class="annot"><span class="annottext">Seq Text
+</span><a href="#local-6989586621679236006"><span class="hs-identifier hs-var">ts</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NonEmptySeq (Either CyclicKeyError Command)
+-&gt; Either CyclicKeyError (NonEmptySeq Command)
+forall (t :: Type -&gt; Type) (f :: Type -&gt; Type) a.
+(Traversable t, Applicative f) =&gt;
+t (f a) -&gt; f (t a)
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/Data.Traversable.html#sequenceA"><span class="hs-identifier hs-var">sequenceA</span></a></span><span> </span><span class="annot"><span class="annottext">(NonEmptySeq (Either CyclicKeyError Command)
+ -&gt; Either CyclicKeyError (NonEmptySeq Command))
+-&gt; NonEmptySeq (Either CyclicKeyError Command)
+-&gt; Either CyclicKeyError (NonEmptySeq Command)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; NonEmptySeq (Either CyclicKeyError Command))
+-&gt; Text -&gt; Seq Text -&gt; NonEmptySeq (Either CyclicKeyError Command)
+forall (f :: Type -&gt; Type) s a.
+(Foldable f, Semigroup s) =&gt;
+(a -&gt; s) -&gt; a -&gt; f a -&gt; s
+</span><a href="Shrun.Utils.html#foldMap1"><span class="hs-identifier hs-var">U.foldMap1</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LegendMap -&gt; Text -&gt; NonEmptySeq (Either CyclicKeyError Command)
+</span><a href="Shrun.Configuration.Legend.html#lineToCommands"><span class="hs-identifier hs-var">lineToCommands</span></a></span><span> </span><span class="annot"><span class="annottext">LegendMap
+</span><a href="#local-6989586621679236009"><span class="hs-identifier hs-var">mp</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679236008"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">Seq Text
+</span><a href="#local-6989586621679236006"><span class="hs-identifier hs-var">ts</span></a></span><span>
+</span><span id="line-114"></span><span>
+</span><span id="line-115"></span><span class="annot"><a href="Shrun.Configuration.Legend.html#lineToCommands"><span class="hs-identifier hs-type">lineToCommands</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Shrun.Data.Legend.html#LegendMap"><span class="hs-identifier hs-type">LegendMap</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/text-1.2.5.0/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Shrun.Data.NonEmptySeq.html#NonEmptySeq"><span class="hs-identifier hs-type">NonEmptySeq</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="Shrun.Configuration.Legend.html#CyclicKeyError"><span class="hs-identifier hs-type">CyclicKeyError</span></a></span><span> </span><span class="annot"><a href="Shrun.Data.Command.html#Command"><span class="hs-identifier hs-type">Command</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-116"></span><span id="lineToCommands"><span class="annot"><span class="annottext">lineToCommands :: LegendMap -&gt; Text -&gt; NonEmptySeq (Either CyclicKeyError Command)
+</span><a href="Shrun.Configuration.Legend.html#lineToCommands"><span class="hs-identifier hs-var hs-var">lineToCommands</span></a></span></span><span> </span><span id="local-6989586621679236002"><span class="annot"><span class="annottext">LegendMap
+</span><a href="#local-6989586621679236002"><span class="hs-identifier hs-var">mp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Text
+-&gt; HashSet Text
+-&gt; Builder
+-&gt; Text
+-&gt; NonEmptySeq (Either CyclicKeyError Command)
+</span><a href="#local-6989586621679236001"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Text
+forall a. Maybe a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="annot"><span class="annottext">HashSet Text
+forall a. HashSet a
+</span><span class="hs-identifier hs-var">Set.empty</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; Builder
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/text-1.2.5.0/src/Data.Text.Internal.Builder.html#fromText"><span class="hs-identifier hs-var">LTBuilder.fromText</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-117"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-118"></span><span>    </span><span class="hs-comment">-- The stringbuilder path is a textual representation of the key path</span><span>
+</span><span id="line-119"></span><span>    </span><span class="hs-comment">-- we have traversed so far, e.g., a -&gt; b -&gt; c</span><span>
+</span><span id="line-120"></span><span>    </span><span id="local-6989586621679236001"><span class="annot"><span class="annottext">go :: Maybe Text
+-&gt; HashSet Text
+-&gt; Builder
+-&gt; Text
+-&gt; NonEmptySeq (Either CyclicKeyError Command)
+</span><a href="#local-6989586621679236001"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span id="local-6989586621679235998"><span class="annot"><span class="annottext">Maybe Text
+</span><a href="#local-6989586621679235998"><span class="hs-identifier hs-var">prevKey</span></a></span></span><span> </span><span id="local-6989586621679235997"><span class="annot"><span class="annottext">HashSet Text
+</span><a href="#local-6989586621679235997"><span class="hs-identifier hs-var">foundKeys</span></a></span></span><span> </span><span id="local-6989586621679235996"><span class="annot"><span class="annottext">Builder
+</span><a href="#local-6989586621679235996"><span class="hs-identifier hs-var">path</span></a></span></span><span> </span><span id="local-6989586621679235995"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679235995"><span class="hs-identifier hs-var">line</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Text -&gt; LegendMap -&gt; Maybe (NonEmptySeq Text)
+forall k v. (Eq k, Hashable k) =&gt; k -&gt; HashMap k v -&gt; Maybe v
+</span><span class="hs-identifier hs-var">Map.lookup</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679235995"><span class="hs-identifier hs-var">line</span></a></span><span> </span><span class="annot"><span class="annottext">LegendMap
+</span><a href="#local-6989586621679236002"><span class="hs-identifier hs-var">mp</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-121"></span><span>      </span><span class="hs-comment">-- The line isn't a key, return it.</span><span>
+</span><span id="line-122"></span><span>      </span><span class="annot"><span class="annottext">Maybe (NonEmptySeq Text)
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Either CyclicKeyError Command
+-&gt; NonEmptySeq (Either CyclicKeyError Command)
+forall a. a -&gt; NonEmptySeq a
+</span><a href="Shrun.Data.NonEmptySeq.html#singleton"><span class="hs-identifier hs-var">NESeq.singleton</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Command -&gt; Either CyclicKeyError Command
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe Text -&gt; Text -&gt; Command
+</span><a href="Shrun.Data.Command.html#MkCommand"><span class="hs-identifier hs-var">MkCommand</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Text
+</span><a href="#local-6989586621679235998"><span class="hs-identifier hs-var">prevKey</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679235995"><span class="hs-identifier hs-var">line</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-123"></span><span>      </span><span class="hs-comment">-- The line is a key, check for cycles and recursively</span><span>
+</span><span id="line-124"></span><span>      </span><span class="hs-comment">-- call.</span><span>
+</span><span id="line-125"></span><span>      </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679235992"><span class="annot"><span class="annottext">NonEmptySeq Text
+</span><a href="#local-6989586621679235992"><span class="hs-identifier hs-var">val</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe Text
+</span><a href="#local-6989586621679235991"><span class="hs-identifier hs-var">maybeCyclicVal</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-126"></span><span>        </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679235990"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679235990"><span class="hs-identifier hs-var">cyclicVal</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-127"></span><span>          </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679235989"><span class="annot"><span class="annottext">pathTxt :: Text
+</span><a href="#local-6989586621679235989"><span class="hs-identifier hs-var hs-var">pathTxt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Builder -&gt; Text -&gt; Text -&gt; Text
+</span><a href="Shrun.Configuration.Legend.html#builderToPath"><span class="hs-identifier hs-var">builderToPath</span></a></span><span> </span><span class="annot"><span class="annottext">Builder
+</span><a href="#local-6989586621679235996"><span class="hs-identifier hs-var">path</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679235995"><span class="hs-identifier hs-var">line</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679235990"><span class="hs-identifier hs-var">cyclicVal</span></a></span><span>
+</span><span id="line-128"></span><span>           </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">Either CyclicKeyError Command
+-&gt; NonEmptySeq (Either CyclicKeyError Command)
+forall a. a -&gt; NonEmptySeq a
+</span><a href="Shrun.Data.NonEmptySeq.html#singleton"><span class="hs-identifier hs-var">NESeq.singleton</span></a></span><span> </span><span class="annot"><span class="annottext">(Either CyclicKeyError Command
+ -&gt; NonEmptySeq (Either CyclicKeyError Command))
+-&gt; Either CyclicKeyError Command
+-&gt; NonEmptySeq (Either CyclicKeyError Command)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">CyclicKeyError -&gt; Either CyclicKeyError Command
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; CyclicKeyError
+</span><a href="Shrun.Configuration.Legend.html#MkCyclicKeyError"><span class="hs-identifier hs-var">MkCyclicKeyError</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679235989"><span class="hs-identifier hs-var">pathTxt</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-129"></span><span>        </span><span class="annot"><span class="annottext">Maybe Text
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">NonEmptySeq Text
+</span><a href="#local-6989586621679235992"><span class="hs-identifier hs-var">val</span></a></span><span> </span><span class="annot"><span class="annottext">NonEmptySeq Text
+-&gt; (Text -&gt; NonEmptySeq (Either CyclicKeyError Command))
+-&gt; NonEmptySeq (Either CyclicKeyError Command)
+forall (m :: Type -&gt; Type) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Text
+-&gt; HashSet Text
+-&gt; Builder
+-&gt; Text
+-&gt; NonEmptySeq (Either CyclicKeyError Command)
+</span><a href="#local-6989586621679236001"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; Maybe Text
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679235995"><span class="hs-identifier hs-var">line</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">HashSet Text
+</span><a href="#local-6989586621679235987"><span class="hs-identifier hs-var">foundKeys'</span></a></span><span> </span><span class="annot"><span class="annottext">Builder
+</span><a href="#local-6989586621679235986"><span class="hs-identifier hs-var">path'</span></a></span><span>
+</span><span id="line-130"></span><span>        </span><span class="hs-keyword">where</span><span>
+</span><span id="line-131"></span><span>          </span><span id="local-6989586621679235987"><span class="annot"><span class="annottext">foundKeys' :: HashSet Text
+</span><a href="#local-6989586621679235987"><span class="hs-identifier hs-var hs-var">foundKeys'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; HashSet Text -&gt; HashSet Text
+forall a. (Eq a, Hashable a) =&gt; a -&gt; HashSet a -&gt; HashSet a
+</span><span class="hs-identifier hs-var">Set.insert</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679235995"><span class="hs-identifier hs-var">line</span></a></span><span> </span><span class="annot"><span class="annottext">HashSet Text
+</span><a href="#local-6989586621679235997"><span class="hs-identifier hs-var">foundKeys</span></a></span><span>
+</span><span id="line-132"></span><span>          </span><span class="hs-comment">-- Detect if we have an intersection between previously found</span><span>
+</span><span id="line-133"></span><span>          </span><span class="hs-comment">-- keys and the values we just found. If so we have found a</span><span>
+</span><span id="line-134"></span><span>          </span><span class="hs-comment">-- cyclic error.</span><span>
+</span><span id="line-135"></span><span>          </span><span id="local-6989586621679235984"><span class="annot"><span class="annottext">intersect :: HashSet Text
+</span><a href="#local-6989586621679235984"><span class="hs-identifier hs-var hs-var">intersect</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">HashSet Text -&gt; HashSet Text -&gt; HashSet Text
+forall a. (Eq a, Hashable a) =&gt; HashSet a -&gt; HashSet a -&gt; HashSet a
+</span><span class="hs-identifier hs-var">Set.intersection</span></span><span> </span><span class="annot"><span class="annottext">HashSet Text
+</span><a href="#local-6989586621679235997"><span class="hs-identifier hs-var">foundKeys</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">NonEmptySeq Text -&gt; HashSet Text
+</span><a href="#local-6989586621679235982"><span class="hs-identifier hs-var">neToSet</span></a></span><span> </span><span class="annot"><span class="annottext">NonEmptySeq Text
+</span><a href="#local-6989586621679235992"><span class="hs-identifier hs-var">val</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-136"></span><span>          </span><span class="hs-comment">-- If there are cycles then this should be `Just cyclicVal`</span><span>
+</span><span id="line-137"></span><span>          </span><span class="hs-comment">-- (this list should have at most one since we are detecting</span><span>
+</span><span id="line-138"></span><span>          </span><span class="hs-comment">-- the first cycle)</span><span>
+</span><span id="line-139"></span><span>          </span><span id="local-6989586621679235991"><span class="annot"><span class="annottext">maybeCyclicVal :: Maybe Text
+</span><a href="#local-6989586621679235991"><span class="hs-identifier hs-var hs-var">maybeCyclicVal</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">List Text -&gt; Maybe Text
+forall a. List a -&gt; Maybe a
+</span><a href="Shrun.Prelude.html#headMaybe"><span class="hs-identifier hs-var">headMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">(List Text -&gt; Maybe Text) -&gt; List Text -&gt; Maybe Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">HashSet Text -&gt; List Text
+forall a. HashSet a -&gt; [a]
+</span><span class="hs-identifier hs-var">Set.toList</span></span><span> </span><span class="annot"><span class="annottext">HashSet Text
+</span><a href="#local-6989586621679235984"><span class="hs-identifier hs-var">intersect</span></a></span><span>
+</span><span id="line-140"></span><span>          </span><span id="local-6989586621679235986"><span class="annot"><span class="annottext">path' :: Builder
+</span><a href="#local-6989586621679235986"><span class="hs-identifier hs-var hs-var">path'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Builder
+</span><a href="#local-6989586621679235996"><span class="hs-identifier hs-var">path</span></a></span><span> </span><span class="annot"><span class="annottext">Builder -&gt; Builder -&gt; Builder
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Builder
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/text-1.2.5.0/src/Data.Text.Internal.Builder.html#fromText"><span class="hs-identifier hs-var">LTBuilder.fromText</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679235995"><span class="hs-identifier hs-var">line</span></a></span><span> </span><span class="annot"><span class="annottext">Builder -&gt; Builder -&gt; Builder
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Builder
+</span><span class="hs-string">&quot; -&gt; &quot;</span></span><span>
+</span><span id="line-141"></span><span>          </span><span id="local-6989586621679235982"><span class="annot"><span class="annottext">neToSet :: NonEmptySeq Text -&gt; HashSet Text
+</span><a href="#local-6989586621679235982"><span class="hs-identifier hs-var hs-var">neToSet</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">List Text -&gt; HashSet Text
+forall a. (Eq a, Hashable a) =&gt; [a] -&gt; HashSet a
+</span><span class="hs-identifier hs-var">Set.fromList</span></span><span> </span><span class="annot"><span class="annottext">(List Text -&gt; HashSet Text)
+-&gt; (NonEmptySeq Text -&gt; List Text)
+-&gt; NonEmptySeq Text
+-&gt; HashSet Text
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">NonEmptySeq Text -&gt; List Text
+forall a. NonEmptySeq a -&gt; List a
+</span><a href="Shrun.Data.NonEmptySeq.html#toList"><span class="hs-identifier hs-var">NESeq.toList</span></a></span><span>
+</span><span id="line-142"></span><span>
+</span><span id="line-143"></span><span class="annot"><a href="Shrun.Configuration.Legend.html#builderToPath"><span class="hs-identifier hs-type">builderToPath</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/text-1.2.5.0/src/Data.Text.Internal.Builder.html#Builder"><span class="hs-identifier hs-type">Builder</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/text-1.2.5.0/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/text-1.2.5.0/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/text-1.2.5.0/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-144"></span><span id="builderToPath"><span class="annot"><span class="annottext">builderToPath :: Builder -&gt; Text -&gt; Text -&gt; Text
+</span><a href="Shrun.Configuration.Legend.html#builderToPath"><span class="hs-identifier hs-var hs-var">builderToPath</span></a></span></span><span> </span><span id="local-6989586621679235974"><span class="annot"><span class="annottext">Builder
+</span><a href="#local-6989586621679235974"><span class="hs-identifier hs-var">path</span></a></span></span><span> </span><span id="local-6989586621679235973"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679235973"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span id="local-6989586621679235972"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679235972"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-145"></span><span>  </span><span class="annot"><span class="annottext">Text -&gt; Text
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/text-1.2.5.0/src/Data.Text.Lazy.html#toStrict"><span class="hs-identifier hs-var">LazyT.toStrict</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Text) -&gt; Text -&gt; Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-146"></span><span>    </span><span class="annot"><span class="annottext">Builder -&gt; Text
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/text-1.2.5.0/src/Data.Text.Internal.Builder.html#toLazyText"><span class="hs-identifier hs-var">LTBuilder.toLazyText</span></a></span><span> </span><span class="annot"><span class="annottext">(Builder -&gt; Text) -&gt; Builder -&gt; Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-147"></span><span>      </span><span class="annot"><span class="annottext">Builder
+</span><a href="#local-6989586621679235974"><span class="hs-identifier hs-var">path</span></a></span><span> </span><span class="annot"><span class="annottext">Builder -&gt; Builder -&gt; Builder
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Builder
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/text-1.2.5.0/src/Data.Text.Internal.Builder.html#fromText"><span class="hs-identifier hs-var">LTBuilder.fromText</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679235973"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">Builder -&gt; Builder -&gt; Builder
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Builder
+</span><span class="hs-string">&quot; -&gt; &quot;</span></span><span> </span><span class="annot"><span class="annottext">Builder -&gt; Builder -&gt; Builder
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Builder
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/text-1.2.5.0/src/Data.Text.Internal.Builder.html#fromText"><span class="hs-identifier hs-var">LTBuilder.fromText</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679235972"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-148"></span></pre></body></html>

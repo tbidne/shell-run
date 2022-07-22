@@ -1,0 +1,101 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveAnyClass #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE TemplateHaskell #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-comment">-- | Provides the 'Command' wrapper for commands.</span><span>
+</span><span id="line-6"></span><span class="hs-comment">--</span><span>
+</span><span id="line-7"></span><span class="hs-comment">-- @since 0.1</span><span>
+</span><span id="line-8"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Shrun.Data.Command</span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Shrun.Data.Command.html#Command"><span class="hs-identifier">Command</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/ikx35jf9ay0vq9gggwf9m1afccjqm86f-hashable-1.4.0.2-doc/share/doc/hashable-1.4.0.2/html/src/Data.Hashable.html"><span class="hs-identifier">Data.Hashable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/ikx35jf9ay0vq9gggwf9m1afccjqm86f-hashable-1.4.0.2-doc/share/doc/hashable-1.4.0.2/html/src/Data.Hashable.Class.html#Hashable"><span class="hs-identifier">Hashable</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/Data.String.html"><span class="hs-identifier">Data.String</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/Data.String.html#IsString"><span class="hs-identifier">IsString</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/text-1.2.5.0/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">T</span></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Shrun.Prelude.html"><span class="hs-identifier">Shrun.Prelude</span></a></span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-comment">-- $setup</span><span>
+</span><span id="line-19"></span><span class="hs-comment">-- &gt;&gt;&gt; :set -XOverloadedLists</span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-comment">-- | Wrapper for shell commands.</span><span>
+</span><span id="line-22"></span><span class="hs-comment">--</span><span>
+</span><span id="line-23"></span><span class="hs-comment">-- @since 0.1</span><span>
+</span><span id="line-24"></span><span id="local-6989586621679229822"><span id="local-6989586621679229823"></span></span><span class="hs-keyword">data</span><span> </span><span id="Command"><span class="annot"><a href="Shrun.Data.Command.html#Command"><span class="hs-identifier hs-var">Command</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="MkCommand"><span class="annot"><a href="Shrun.Data.Command.html#MkCommand"><span class="hs-identifier hs-var">MkCommand</span></a></span></span><span>
+</span><span id="line-25"></span><span>  </span><span class="hs-special">{</span><span> </span><span class="hs-comment">-- | The key name for the command, for display purposes.</span><span>
+</span><span id="line-26"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-27"></span><span>    </span><span class="hs-comment">-- @since 0.1</span><span>
+</span><span id="line-28"></span><span>    </span><span id="%24sel%3AgetKey%3AMkCommand"><span class="annot"><span class="annottext">Command -&gt; Maybe Text
+</span><a href="Shrun.Data.Command.html#%24sel%3AgetKey%3AMkCommand"><span class="hs-identifier hs-var hs-var">getKey</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/text-1.2.5.0/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>    </span><span class="hs-comment">-- | The shell command to run.</span><span>
+</span><span id="line-30"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-31"></span><span>    </span><span class="hs-comment">-- @since 0.1</span><span>
+</span><span id="line-32"></span><span>    </span><span id="%24sel%3Acommand%3AMkCommand"><span class="annot"><span class="annottext">Command -&gt; Text
+</span><a href="Shrun.Data.Command.html#%24sel%3Acommand%3AMkCommand"><span class="hs-identifier hs-var hs-var">command</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/text-1.2.5.0/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span>
+</span><span id="line-35"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-36"></span><span>      </span><span id="local-6989586621679229811"><span id="local-6989586621679229817"><span class="annot"><span class="annottext">Command -&gt; Command -&gt; Bool
+(Command -&gt; Command -&gt; Bool)
+-&gt; (Command -&gt; Command -&gt; Bool) -&gt; Eq Command
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: Command -&gt; Command -&gt; Bool
+$c/= :: Command -&gt; Command -&gt; Bool
+== :: Command -&gt; Command -&gt; Bool
+$c== :: Command -&gt; Command -&gt; Bool
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/ghc-prim-0.8.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span>
+</span><span id="line-37"></span><span>      </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-38"></span><span>      </span><span class="annot"><span class="annottext">(forall x. Command -&gt; Rep Command x)
+-&gt; (forall x. Rep Command x -&gt; Command) -&gt; Generic Command
+forall x. Rep Command x -&gt; Command
+forall x. Command -&gt; Rep Command x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep Command x -&gt; Command
+$cfrom :: forall x. Command -&gt; Rep Command x
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-39"></span><span>      </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-40"></span><span>      </span><span id="local-6989586621679229794"><span id="local-6989586621679229796"><span id="local-6989586621679229804"><span class="annot"><span class="annottext">Int -&gt; Command -&gt; ShowS
+[Command] -&gt; ShowS
+Command -&gt; String
+(Int -&gt; Command -&gt; ShowS)
+-&gt; (Command -&gt; String) -&gt; ([Command] -&gt; ShowS) -&gt; Show Command
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [Command] -&gt; ShowS
+$cshowList :: [Command] -&gt; ShowS
+show :: Command -&gt; String
+$cshow :: Command -&gt; String
+showsPrec :: Int -&gt; Command -&gt; ShowS
+$cshowsPrec :: Int -&gt; Command -&gt; ShowS
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span>
+</span><span id="line-41"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span>
+</span><span id="line-43"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-44"></span><span>      </span><span id="local-6989586621679229786"><span id="local-6989586621679229788"><span class="annot"><span class="annottext">Eq Command
+Eq Command
+-&gt; (Int -&gt; Command -&gt; Int) -&gt; (Command -&gt; Int) -&gt; Hashable Command
+Int -&gt; Command -&gt; Int
+Command -&gt; Int
+forall a. Eq a -&gt; (Int -&gt; a -&gt; Int) -&gt; (a -&gt; Int) -&gt; Hashable a
+hash :: Command -&gt; Int
+$chash :: Command -&gt; Int
+hashWithSalt :: Int -&gt; Command -&gt; Int
+$chashWithSalt :: Int -&gt; Command -&gt; Int
+</span><a href="file:///nix/store/ikx35jf9ay0vq9gggwf9m1afccjqm86f-hashable-1.4.0.2-doc/share/doc/hashable-1.4.0.2/html/src/Data.Hashable.Class.html#C%3AHashable"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Hashable</span></a></span></span></span><span>
+</span><span id="line-45"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-48"></span><span id="local-6989586621679229775"><span id="local-6989586621679229780"><span id="local-6989586621679229865"><span id="local-6989586621679229866"><span id="local-6989586621679229867"><span id="local-6989586621679229868"><span id="local-6989586621679229869"><span id="local-6989586621679229870"><span class="hs-identifier">makeFieldLabelsNoPrefix</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">Command</span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-49"></span><span>
+</span><span id="line-50"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/Data.String.html#IsString"><span class="hs-identifier hs-type">IsString</span></a></span><span> </span><span class="annot"><a href="Shrun.Data.Command.html#Command"><span class="hs-identifier hs-type">Command</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-51"></span><span>  </span><span id="local-6989586621679229746"><span class="annot"><span class="annottext">fromString :: String -&gt; Command
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/Data.String.html#fromString"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromString</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Text -&gt; Text -&gt; Command
+</span><a href="Shrun.Data.Command.html#MkCommand"><span class="hs-identifier hs-var">MkCommand</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Text
+forall a. Maybe a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Command) -&gt; (String -&gt; Text) -&gt; String -&gt; Command
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Text
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/text-1.2.5.0/src/Data.Text.html#pack"><span class="hs-identifier hs-var">T.pack</span></a></span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-pragma">{-# INLINEABLE</span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/Data.String.html#fromString"><span class="hs-pragma hs-type">fromString</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-53"></span></pre></body></html>

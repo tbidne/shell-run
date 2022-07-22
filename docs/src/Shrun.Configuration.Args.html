@@ -1,0 +1,1375 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE TemplateHaskell #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-comment">-- | Provides functionality for parsing command line arguments.</span><span>
+</span><span id="line-5"></span><span class="hs-comment">--</span><span>
+</span><span id="line-6"></span><span class="hs-comment">-- @since 0.5</span><span>
+</span><span id="line-7"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Shrun.Configuration.Args</span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Shrun.Configuration.Args.html#Args"><span class="hs-identifier">Args</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>    </span><span class="annot"><a href="Shrun.Configuration.Args.html#defaultArgs"><span class="hs-identifier">defaultArgs</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>    </span><span class="annot"><a href="Shrun.Configuration.Args.html#parserInfoArgs"><span class="hs-identifier">parserInfoArgs</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/Data.List.html"><span class="hs-identifier">Data.List</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/Data.List.NonEmpty.html"><span class="hs-identifier">Data.List.NonEmpty</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">NE</span></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/Data.String.html"><span class="hs-identifier">Data.String</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/Data.String.html#IsString"><span class="hs-identifier">IsString</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/text-1.2.5.0/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">T</span></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Time.Relative</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">RelativeTime</span></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/m9la0ki982sinv33y7kmss4kgc10x2mh-package-version-0.1.0.0-doc/share/doc/package-version-0.1.0.0/html/src/Data.Version.Package.html"><span class="hs-identifier">Data.Version.Package</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">PV</span></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/sslhavfw0cdlchvlycl8mvsarv8s1v1n-gitrev-1.3.1-doc/share/doc/gitrev-1.3.1/html/src/Development.GitRev.html"><span class="hs-identifier">Development.GitRev</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">GitRev</span></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Options.Applicative</span></span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier">ParseError</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">ErrorMsg</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>    </span><span class="annot"><span class="hs-identifier">Parser</span></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>    </span><span class="annot"><span class="hs-identifier">ParserInfo</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>    </span><span class="annot"><span class="hs-identifier">ReadM</span></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Options.Applicative</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">OA</span></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Options.Applicative.Help.Chunk</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Chunk</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Options.Applicative.Types</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">ArgPolicy</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Shrun.Configuration.Args.TH.html"><span class="hs-identifier">Shrun.Configuration.Args.TH</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Shrun.Configuration.Args.TH.html#getDefaultConfigTH"><span class="hs-identifier">getDefaultConfigTH</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Shrun.Configuration.Env.Types.html"><span class="hs-identifier">Shrun.Configuration.Env.Types</span></a></span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Shrun.Configuration.Env.Types.html#CmdDisplay"><span class="hs-identifier">CmdDisplay</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-33"></span><span>    </span><span class="annot"><a href="Shrun.Configuration.Env.Types.html#CmdLogging"><span class="hs-identifier">CmdLogging</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-34"></span><span>    </span><span class="annot"><a href="Shrun.Configuration.Env.Types.html#LineTruncation"><span class="hs-identifier">LineTruncation</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-35"></span><span>    </span><span class="annot"><a href="Shrun.Configuration.Env.Types.html#StripControl"><span class="hs-identifier">StripControl</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-36"></span><span>    </span><span class="annot"><a href="Shrun.Configuration.Env.Types.html#TruncRegion"><span class="hs-identifier">TruncRegion</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-37"></span><span>    </span><span class="annot"><a href="Shrun.Configuration.Env.Types.html#Truncation"><span class="hs-identifier">Truncation</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Shrun.Data.FilePathDefault.html"><span class="hs-identifier">Shrun.Data.FilePathDefault</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Shrun.Data.FilePathDefault.html#FilePathDefault"><span class="hs-identifier">FilePathDefault</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Shrun.Data.NonEmptySeq.html"><span class="hs-identifier">Shrun.Data.NonEmptySeq</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Shrun.Data.NonEmptySeq.html#NonEmptySeq"><span class="hs-identifier">NonEmptySeq</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Shrun.Data.NonEmptySeq.html"><span class="hs-identifier">Shrun.Data.NonEmptySeq</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">NESeq</span></span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Shrun.Data.Timeout.html"><span class="hs-identifier">Shrun.Data.Timeout</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Shrun.Data.Timeout.html#Timeout"><span class="hs-identifier">Timeout</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Shrun.Prelude.html"><span class="hs-identifier">Shrun.Prelude</span></a></span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- | Type for parsing command line args.</span><span>
+</span><span id="line-46"></span><span class="hs-comment">--</span><span>
+</span><span id="line-47"></span><span class="hs-comment">-- @since 0.1</span><span>
+</span><span id="line-48"></span><span class="hs-keyword">data</span><span> </span><span id="Args"><span class="annot"><a href="Shrun.Configuration.Args.html#Args"><span class="hs-identifier hs-var">Args</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="MkArgs"><span class="annot"><a href="Shrun.Configuration.Args.html#MkArgs"><span class="hs-identifier hs-var">MkArgs</span></a></span></span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-special">{</span><span> </span><span class="hs-comment">-- | Optional config file.</span><span>
+</span><span id="line-50"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-51"></span><span>    </span><span class="hs-comment">-- @since 0.5</span><span>
+</span><span id="line-52"></span><span>    </span><span id="%24sel%3AconfigPath%3AMkArgs"><span class="annot"><span class="annottext">Args -&gt; Maybe String
+</span><a href="Shrun.Configuration.Args.html#%24sel%3AconfigPath%3AMkArgs"><span class="hs-identifier hs-var hs-var">configPath</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-53"></span><span>    </span><span class="hs-comment">-- | Ignores toml config file.</span><span>
+</span><span id="line-54"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-55"></span><span>    </span><span class="hs-comment">-- @since 0.5</span><span>
+</span><span id="line-56"></span><span>    </span><span id="%24sel%3AnoConfig%3AMkArgs"><span class="annot"><span class="annottext">Args -&gt; Bool
+</span><a href="Shrun.Configuration.Args.html#%24sel%3AnoConfig%3AMkArgs"><span class="hs-identifier hs-var hs-var">noConfig</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/ghc-prim-0.8.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-57"></span><span>    </span><span class="hs-comment">-- | Timeout.</span><span>
+</span><span id="line-58"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-59"></span><span>    </span><span class="hs-comment">-- @since 0.1</span><span>
+</span><span id="line-60"></span><span>    </span><span id="%24sel%3Atimeout%3AMkArgs"><span class="annot"><span class="annottext">Args -&gt; Maybe Timeout
+</span><a href="Shrun.Configuration.Args.html#%24sel%3Atimeout%3AMkArgs"><span class="hs-identifier hs-var hs-var">timeout</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Shrun.Data.Timeout.html#Timeout"><span class="hs-identifier hs-type">Timeout</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-61"></span><span>    </span><span class="hs-comment">-- | Global option for logging. If it is true then all logging is</span><span>
+</span><span id="line-62"></span><span>    </span><span class="hs-comment">-- disabled.</span><span>
+</span><span id="line-63"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-64"></span><span>    </span><span class="hs-comment">-- @since 0.1</span><span>
+</span><span id="line-65"></span><span>    </span><span id="%24sel%3AdisableLogging%3AMkArgs"><span class="annot"><span class="annottext">Args -&gt; Maybe Bool
+</span><a href="Shrun.Configuration.Args.html#%24sel%3AdisableLogging%3AMkArgs"><span class="hs-identifier hs-var hs-var">disableLogging</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/ghc-prim-0.8.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-66"></span><span>    </span><span class="hs-comment">-- | Whether to log commands.</span><span>
+</span><span id="line-67"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-68"></span><span>    </span><span class="hs-comment">-- @since 0.1</span><span>
+</span><span id="line-69"></span><span>    </span><span id="%24sel%3AcmdLogging%3AMkArgs"><span class="annot"><span class="annottext">Args -&gt; Maybe CmdLogging
+</span><a href="Shrun.Configuration.Args.html#%24sel%3AcmdLogging%3AMkArgs"><span class="hs-identifier hs-var hs-var">cmdLogging</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Shrun.Configuration.Env.Types.html#CmdLogging"><span class="hs-identifier hs-type">CmdLogging</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-70"></span><span>    </span><span class="hs-comment">-- | Whether to display command by (key) name or command.</span><span>
+</span><span id="line-71"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-72"></span><span>    </span><span class="hs-comment">-- @since 0.1</span><span>
+</span><span id="line-73"></span><span>    </span><span id="%24sel%3AcmdDisplay%3AMkArgs"><span class="annot"><span class="annottext">Args -&gt; Maybe CmdDisplay
+</span><a href="Shrun.Configuration.Args.html#%24sel%3AcmdDisplay%3AMkArgs"><span class="hs-identifier hs-var hs-var">cmdDisplay</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Shrun.Configuration.Env.Types.html#CmdDisplay"><span class="hs-identifier hs-type">CmdDisplay</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-74"></span><span>    </span><span class="hs-comment">-- | Determines to what extent we should remove control characters</span><span>
+</span><span id="line-75"></span><span>    </span><span class="hs-comment">-- from logs.</span><span>
+</span><span id="line-76"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-77"></span><span>    </span><span class="hs-comment">-- @since 0.3</span><span>
+</span><span id="line-78"></span><span>    </span><span id="%24sel%3AstripControl%3AMkArgs"><span class="annot"><span class="annottext">Args -&gt; Maybe StripControl
+</span><a href="Shrun.Configuration.Args.html#%24sel%3AstripControl%3AMkArgs"><span class="hs-identifier hs-var hs-var">stripControl</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Shrun.Configuration.Env.Types.html#StripControl"><span class="hs-identifier hs-type">StripControl</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-79"></span><span>    </span><span class="hs-comment">-- | The max number of command characters to display in the logs.</span><span>
+</span><span id="line-80"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-81"></span><span>    </span><span class="hs-comment">-- @since 0.1</span><span>
+</span><span id="line-82"></span><span>    </span><span id="%24sel%3AcmdNameTrunc%3AMkArgs"><span class="annot"><span class="annottext">Args -&gt; Maybe (Truncation 'TCmdName)
+</span><a href="Shrun.Configuration.Args.html#%24sel%3AcmdNameTrunc%3AMkArgs"><span class="hs-identifier hs-var hs-var">cmdNameTrunc</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Shrun.Configuration.Env.Types.html#Truncation"><span class="hs-identifier hs-type">Truncation</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="Shrun.Configuration.Env.Types.html#TCmdName"><span class="hs-identifier hs-type">TCmdName</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-83"></span><span>    </span><span class="hs-comment">-- | The max number of line characters to display in the logs.</span><span>
+</span><span id="line-84"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-85"></span><span>    </span><span class="hs-comment">-- @since 0.1</span><span>
+</span><span id="line-86"></span><span>    </span><span id="%24sel%3AcmdLineTrunc%3AMkArgs"><span class="annot"><span class="annottext">Args -&gt; Maybe LineTruncation
+</span><a href="Shrun.Configuration.Args.html#%24sel%3AcmdLineTrunc%3AMkArgs"><span class="hs-identifier hs-var hs-var">cmdLineTrunc</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Shrun.Configuration.Env.Types.html#LineTruncation"><span class="hs-identifier hs-type">LineTruncation</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-87"></span><span>    </span><span class="hs-comment">-- | Optional path to log file.</span><span>
+</span><span id="line-88"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-89"></span><span>    </span><span class="hs-comment">-- @since 0.1</span><span>
+</span><span id="line-90"></span><span>    </span><span id="%24sel%3AfileLogging%3AMkArgs"><span class="annot"><span class="annottext">Args -&gt; Maybe FilePathDefault
+</span><a href="Shrun.Configuration.Args.html#%24sel%3AfileLogging%3AMkArgs"><span class="hs-identifier hs-var hs-var">fileLogging</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Shrun.Data.FilePathDefault.html#FilePathDefault"><span class="hs-identifier hs-type">FilePathDefault</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-91"></span><span>    </span><span class="hs-comment">-- | 'stripControl' for the log file.</span><span>
+</span><span id="line-92"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-93"></span><span>    </span><span class="hs-comment">-- @since 0.5</span><span>
+</span><span id="line-94"></span><span>    </span><span id="%24sel%3AfileLogStripControl%3AMkArgs"><span class="annot"><span class="annottext">Args -&gt; Maybe StripControl
+</span><a href="Shrun.Configuration.Args.html#%24sel%3AfileLogStripControl%3AMkArgs"><span class="hs-identifier hs-var hs-var">fileLogStripControl</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Shrun.Configuration.Env.Types.html#StripControl"><span class="hs-identifier hs-type">StripControl</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-95"></span><span>    </span><span class="hs-comment">-- | List of commands.</span><span>
+</span><span id="line-96"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-97"></span><span>    </span><span class="hs-comment">-- @since 0.1</span><span>
+</span><span id="line-98"></span><span>    </span><span id="%24sel%3Acommands%3AMkArgs"><span class="annot"><span class="annottext">Args -&gt; NonEmptySeq Text
+</span><a href="Shrun.Configuration.Args.html#%24sel%3Acommands%3AMkArgs"><span class="hs-identifier hs-var hs-var">commands</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="Shrun.Data.NonEmptySeq.html#NonEmptySeq"><span class="hs-identifier hs-type">NonEmptySeq</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/text-1.2.5.0/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-99"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-100"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span>
+</span><span id="line-101"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-102"></span><span>      </span><span id="local-6989586621679232541"><span id="local-6989586621679232567"><span class="annot"><span class="annottext">Args -&gt; Args -&gt; Bool
+(Args -&gt; Args -&gt; Bool) -&gt; (Args -&gt; Args -&gt; Bool) -&gt; Eq Args
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: Args -&gt; Args -&gt; Bool
+$c/= :: Args -&gt; Args -&gt; Bool
+== :: Args -&gt; Args -&gt; Bool
+$c== :: Args -&gt; Args -&gt; Bool
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/ghc-prim-0.8.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span>
+</span><span id="line-103"></span><span>      </span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-104"></span><span>      </span><span id="local-6989586621679232498"><span id="local-6989586621679232500"><span id="local-6989586621679232528"><span class="annot"><span class="annottext">Int -&gt; Args -&gt; ShowS
+[Args] -&gt; ShowS
+Args -&gt; String
+(Int -&gt; Args -&gt; ShowS)
+-&gt; (Args -&gt; String) -&gt; ([Args] -&gt; ShowS) -&gt; Show Args
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [Args] -&gt; ShowS
+$cshowList :: [Args] -&gt; ShowS
+show :: Args -&gt; String
+$cshow :: Args -&gt; String
+showsPrec :: Int -&gt; Args -&gt; ShowS
+$cshowsPrec :: Int -&gt; Args -&gt; ShowS
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span>
+</span><span id="line-105"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-106"></span><span>
+</span><span id="line-107"></span><span class="hs-comment">-- | @since 0.1</span><span>
+</span><span id="line-108"></span><span id="local-6989586621679232426"><span id="local-6989586621679232431"><span id="local-6989586621679232436"><span id="local-6989586621679232441"><span id="local-6989586621679232446"><span id="local-6989586621679232451"><span id="local-6989586621679232456"><span id="local-6989586621679232461"><span id="local-6989586621679232466"><span id="local-6989586621679232471"><span id="local-6989586621679232476"><span id="local-6989586621679232481"><span id="local-6989586621679232810"><span id="local-6989586621679232811"><span id="local-6989586621679232812"><span id="local-6989586621679232813"><span id="local-6989586621679232814"><span id="local-6989586621679232815"><span id="local-6989586621679232816"><span id="local-6989586621679232817"><span id="local-6989586621679232818"><span id="local-6989586621679232819"><span id="local-6989586621679232820"><span id="local-6989586621679232821"><span id="local-6989586621679232822"><span id="local-6989586621679232823"><span id="local-6989586621679232824"><span id="local-6989586621679232825"><span id="local-6989586621679232826"><span id="local-6989586621679232827"><span id="local-6989586621679232828"><span id="local-6989586621679232829"><span id="local-6989586621679232830"><span id="local-6989586621679232831"><span id="local-6989586621679232832"><span id="local-6989586621679232833"><span id="local-6989586621679232834"><span id="local-6989586621679232835"><span id="local-6989586621679232836"><span id="local-6989586621679232837"><span id="local-6989586621679232838"><span id="local-6989586621679232839"><span id="local-6989586621679232840"><span id="local-6989586621679232841"><span id="local-6989586621679232842"><span id="local-6989586621679232843"><span id="local-6989586621679232844"><span id="local-6989586621679232845"><span class="hs-identifier">makeFieldLabelsNoPrefix</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">Args</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-109"></span><span>
+</span><span id="line-110"></span><span class="hs-comment">-- | Default configuration.</span><span>
+</span><span id="line-111"></span><span class="hs-comment">--</span><span>
+</span><span id="line-112"></span><span class="hs-comment">-- @since 0.1</span><span>
+</span><span id="line-113"></span><span class="annot"><a href="Shrun.Configuration.Args.html#defaultArgs"><span class="hs-identifier hs-type">defaultArgs</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Shrun.Data.NonEmptySeq.html#NonEmptySeq"><span class="hs-identifier hs-type">NonEmptySeq</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/text-1.2.5.0/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Shrun.Configuration.Args.html#Args"><span class="hs-identifier hs-type">Args</span></a></span><span>
+</span><span id="line-114"></span><span id="defaultArgs"><span class="annot"><span class="annottext">defaultArgs :: NonEmptySeq Text -&gt; Args
+</span><a href="Shrun.Configuration.Args.html#defaultArgs"><span class="hs-identifier hs-var hs-var">defaultArgs</span></a></span></span><span> </span><span id="local-6989586621679232170"><span class="annot"><span class="annottext">NonEmptySeq Text
+</span><a href="#local-6989586621679232170"><span class="hs-identifier hs-var">cmds</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-115"></span><span>  </span><span class="annot"><a href="Shrun.Configuration.Args.html#MkArgs"><span class="hs-identifier hs-type">MkArgs</span></a></span><span>
+</span><span id="line-116"></span><span>    </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">$sel:cmdLogging:MkArgs :: Maybe CmdLogging
+</span><a href="Shrun.Configuration.Args.html#%24sel%3AcmdLogging%3AMkArgs"><span class="hs-identifier hs-var">cmdLogging</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe CmdLogging
+forall (f :: Type -&gt; Type) a. Alternative f =&gt; f a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#empty"><span class="hs-identifier hs-var">empty</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-117"></span><span>      </span><span class="annot"><span class="annottext">$sel:fileLogging:MkArgs :: Maybe FilePathDefault
+</span><a href="Shrun.Configuration.Args.html#%24sel%3AfileLogging%3AMkArgs"><span class="hs-identifier hs-var">fileLogging</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe FilePathDefault
+forall (f :: Type -&gt; Type) a. Alternative f =&gt; f a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#empty"><span class="hs-identifier hs-var">empty</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-118"></span><span>      </span><span class="annot"><span class="annottext">$sel:fileLogStripControl:MkArgs :: Maybe StripControl
+</span><a href="Shrun.Configuration.Args.html#%24sel%3AfileLogStripControl%3AMkArgs"><span class="hs-identifier hs-var">fileLogStripControl</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe StripControl
+forall (f :: Type -&gt; Type) a. Alternative f =&gt; f a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#empty"><span class="hs-identifier hs-var">empty</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-119"></span><span>      </span><span class="annot"><span class="annottext">$sel:cmdDisplay:MkArgs :: Maybe CmdDisplay
+</span><a href="Shrun.Configuration.Args.html#%24sel%3AcmdDisplay%3AMkArgs"><span class="hs-identifier hs-var">cmdDisplay</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe CmdDisplay
+forall (f :: Type -&gt; Type) a. Alternative f =&gt; f a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#empty"><span class="hs-identifier hs-var">empty</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-120"></span><span>      </span><span class="annot"><span class="annottext">$sel:configPath:MkArgs :: Maybe String
+</span><a href="Shrun.Configuration.Args.html#%24sel%3AconfigPath%3AMkArgs"><span class="hs-identifier hs-var">configPath</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe String
+forall (f :: Type -&gt; Type) a. Alternative f =&gt; f a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#empty"><span class="hs-identifier hs-var">empty</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-121"></span><span>      </span><span class="annot"><span class="annottext">$sel:noConfig:MkArgs :: Bool
+</span><a href="Shrun.Configuration.Args.html#%24sel%3AnoConfig%3AMkArgs"><span class="hs-identifier hs-var">noConfig</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/ghc-prim-0.8.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-122"></span><span>      </span><span class="annot"><span class="annottext">$sel:stripControl:MkArgs :: Maybe StripControl
+</span><a href="Shrun.Configuration.Args.html#%24sel%3AstripControl%3AMkArgs"><span class="hs-identifier hs-var">stripControl</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe StripControl
+forall (f :: Type -&gt; Type) a. Alternative f =&gt; f a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#empty"><span class="hs-identifier hs-var">empty</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-123"></span><span>      </span><span class="annot"><span class="annottext">$sel:timeout:MkArgs :: Maybe Timeout
+</span><a href="Shrun.Configuration.Args.html#%24sel%3Atimeout%3AMkArgs"><span class="hs-identifier hs-var">timeout</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Timeout
+forall (f :: Type -&gt; Type) a. Alternative f =&gt; f a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#empty"><span class="hs-identifier hs-var">empty</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-124"></span><span>      </span><span class="annot"><span class="annottext">$sel:cmdNameTrunc:MkArgs :: Maybe (Truncation 'TCmdName)
+</span><a href="Shrun.Configuration.Args.html#%24sel%3AcmdNameTrunc%3AMkArgs"><span class="hs-identifier hs-var">cmdNameTrunc</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe (Truncation 'TCmdName)
+forall (f :: Type -&gt; Type) a. Alternative f =&gt; f a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#empty"><span class="hs-identifier hs-var">empty</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-125"></span><span>      </span><span class="annot"><span class="annottext">$sel:cmdLineTrunc:MkArgs :: Maybe LineTruncation
+</span><a href="Shrun.Configuration.Args.html#%24sel%3AcmdLineTrunc%3AMkArgs"><span class="hs-identifier hs-var">cmdLineTrunc</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe LineTruncation
+forall (f :: Type -&gt; Type) a. Alternative f =&gt; f a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#empty"><span class="hs-identifier hs-var">empty</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-126"></span><span>      </span><span class="annot"><span class="annottext">$sel:disableLogging:MkArgs :: Maybe Bool
+</span><a href="Shrun.Configuration.Args.html#%24sel%3AdisableLogging%3AMkArgs"><span class="hs-identifier hs-var">disableLogging</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Bool
+forall (f :: Type -&gt; Type) a. Alternative f =&gt; f a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#empty"><span class="hs-identifier hs-var">empty</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-127"></span><span>      </span><span class="annot"><span class="annottext">$sel:commands:MkArgs :: NonEmptySeq Text
+</span><a href="Shrun.Configuration.Args.html#%24sel%3Acommands%3AMkArgs"><span class="hs-identifier hs-var">commands</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NonEmptySeq Text
+</span><a href="#local-6989586621679232170"><span class="hs-identifier hs-var">cmds</span></a></span><span>
+</span><span id="line-128"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-129"></span><span>
+</span><span id="line-130"></span><span class="hs-comment">-- | 'ParserInfo' type for parsing 'Args'.</span><span>
+</span><span id="line-131"></span><span class="hs-comment">--</span><span>
+</span><span id="line-132"></span><span class="hs-comment">-- @since 0.1</span><span>
+</span><span id="line-133"></span><span class="annot"><a href="Shrun.Configuration.Args.html#parserInfoArgs"><span class="hs-identifier hs-type">parserInfoArgs</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ParserInfo</span></span><span> </span><span class="annot"><a href="Shrun.Configuration.Args.html#Args"><span class="hs-identifier hs-type">Args</span></a></span><span>
+</span><span id="line-134"></span><span id="parserInfoArgs"><span class="annot"><span class="annottext">parserInfoArgs :: ParserInfo Args
+</span><a href="Shrun.Configuration.Args.html#parserInfoArgs"><span class="hs-identifier hs-var hs-var">parserInfoArgs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-135"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">ParserInfo</span></span><span>
+</span><span id="line-136"></span><span>    </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">infoParser :: Parser Args
+</span><span class="hs-identifier hs-var">infoParser</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Parser Args
+</span><a href="Shrun.Configuration.Args.html#argsParser"><span class="hs-identifier hs-var">argsParser</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-137"></span><span>      </span><span class="annot"><span class="annottext">infoFullDesc :: Bool
+</span><span class="hs-identifier hs-var">infoFullDesc</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/ghc-prim-0.8.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-138"></span><span>      </span><span class="annot"><span class="annottext">infoProgDesc :: Chunk Doc
+</span><span class="hs-identifier hs-var">infoProgDesc</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Doc -&gt; Chunk Doc
+forall a. Maybe a -&gt; Chunk a
+</span><span class="hs-identifier hs-var">Chunk</span></span><span> </span><span class="annot"><span class="annottext">Maybe Doc
+</span><a href="#local-6989586621679232162"><span class="hs-identifier hs-var">desc</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-139"></span><span>      </span><span class="annot"><span class="annottext">infoHeader :: Chunk Doc
+</span><span class="hs-identifier hs-var">infoHeader</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Doc -&gt; Chunk Doc
+forall a. Maybe a -&gt; Chunk a
+</span><span class="hs-identifier hs-var">Chunk</span></span><span> </span><span class="annot"><span class="annottext">Maybe Doc
+</span><a href="#local-6989586621679232160"><span class="hs-identifier hs-var">headerTxt</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-140"></span><span>      </span><span class="annot"><span class="annottext">infoFooter :: Chunk Doc
+</span><span class="hs-identifier hs-var">infoFooter</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Doc -&gt; Chunk Doc
+forall a. Maybe a -&gt; Chunk a
+</span><span class="hs-identifier hs-var">Chunk</span></span><span> </span><span class="annot"><span class="annottext">Maybe Doc
+</span><a href="#local-6989586621679232158"><span class="hs-identifier hs-var">footerTxt</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-141"></span><span>      </span><span class="annot"><span class="annottext">infoFailureCode :: Int
+</span><span class="hs-identifier hs-var">infoFailureCode</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span>
+</span><span id="line-142"></span><span>      </span><span class="annot"><span class="annottext">infoPolicy :: ArgPolicy
+</span><span class="hs-identifier hs-var">infoPolicy</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ArgPolicy
+</span><span class="hs-identifier hs-var">Intersperse</span></span><span>
+</span><span id="line-143"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-144"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-145"></span><span>    </span><span id="local-6989586621679232160"><span class="annot"><span class="annottext">headerTxt :: Maybe Doc
+</span><a href="#local-6989586621679232160"><span class="hs-identifier hs-var hs-var">headerTxt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Doc -&gt; Maybe Doc
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">Doc
+</span><span class="hs-string">&quot;Shrun: A tool for running shell commands concurrently.&quot;</span></span><span>
+</span><span id="line-146"></span><span>    </span><span id="local-6989586621679232158"><span class="annot"><span class="annottext">footerTxt :: Maybe Doc
+</span><a href="#local-6989586621679232158"><span class="hs-identifier hs-var hs-var">footerTxt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Doc -&gt; Maybe Doc
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(Doc -&gt; Maybe Doc) -&gt; Doc -&gt; Maybe Doc
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Doc
+forall a. IsString a =&gt; String -&gt; a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/Data.String.html#fromString"><span class="hs-identifier hs-var">fromString</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="Shrun.Configuration.Args.html#versNum"><span class="hs-identifier hs-var">versNum</span></a></span><span>
+</span><span id="line-147"></span><span>    </span><span id="local-6989586621679232162"><span class="annot"><span class="annottext">desc :: Maybe Doc
+</span><a href="#local-6989586621679232162"><span class="hs-identifier hs-var hs-var">desc</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-148"></span><span>      </span><span class="annot"><span class="annottext">Doc -&gt; Maybe Doc
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(Doc -&gt; Maybe Doc) -&gt; Doc -&gt; Maybe Doc
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-149"></span><span>        </span><span class="annot"><span class="annottext">Doc
+</span><span class="hs-string">&quot;\nShrun runs shell commands concurrently. In addition to &quot;</span></span><span>
+</span><span id="line-150"></span><span>          </span><span class="annot"><span class="annottext">Doc -&gt; Doc -&gt; Doc
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Doc
+</span><span class="hs-string">&quot;providing basic timing and logging functionality, we also provide &quot;</span></span><span>
+</span><span id="line-151"></span><span>          </span><span class="annot"><span class="annottext">Doc -&gt; Doc -&gt; Doc
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Doc
+</span><span class="hs-string">&quot;the ability to pass in a config file that can be used to define &quot;</span></span><span>
+</span><span id="line-152"></span><span>          </span><span class="annot"><span class="annottext">Doc -&gt; Doc -&gt; Doc
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Doc
+</span><span class="hs-string">&quot;aliases for commands. See github.com/tbidne/shrun#README for &quot;</span></span><span>
+</span><span id="line-153"></span><span>          </span><span class="annot"><span class="annottext">Doc -&gt; Doc -&gt; Doc
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Doc
+</span><span class="hs-string">&quot;full documentation.&quot;</span></span><span>
+</span><span id="line-154"></span><span>
+</span><span id="line-155"></span><span class="annot"><a href="Shrun.Configuration.Args.html#argsParser"><span class="hs-identifier hs-type">argsParser</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="annot"><a href="Shrun.Configuration.Args.html#Args"><span class="hs-identifier hs-type">Args</span></a></span><span>
+</span><span id="line-156"></span><span id="argsParser"><span class="annot"><span class="annottext">argsParser :: Parser Args
+</span><a href="Shrun.Configuration.Args.html#argsParser"><span class="hs-identifier hs-var hs-var">argsParser</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-157"></span><span>  </span><span class="annot"><span class="annottext">Maybe String
+-&gt; Bool
+-&gt; Maybe Timeout
+-&gt; Maybe Bool
+-&gt; Maybe CmdLogging
+-&gt; Maybe CmdDisplay
+-&gt; Maybe StripControl
+-&gt; Maybe (Truncation 'TCmdName)
+-&gt; Maybe LineTruncation
+-&gt; Maybe FilePathDefault
+-&gt; Maybe StripControl
+-&gt; NonEmptySeq Text
+-&gt; Args
+</span><a href="Shrun.Configuration.Args.html#MkArgs"><span class="hs-identifier hs-var">MkArgs</span></a></span><span>
+</span><span id="line-158"></span><span>    </span><span class="annot"><span class="annottext">(Maybe String
+ -&gt; Bool
+ -&gt; Maybe Timeout
+ -&gt; Maybe Bool
+ -&gt; Maybe CmdLogging
+ -&gt; Maybe CmdDisplay
+ -&gt; Maybe StripControl
+ -&gt; Maybe (Truncation 'TCmdName)
+ -&gt; Maybe LineTruncation
+ -&gt; Maybe FilePathDefault
+ -&gt; Maybe StripControl
+ -&gt; NonEmptySeq Text
+ -&gt; Args)
+-&gt; Parser (Maybe String)
+-&gt; Parser
+     (Bool
+      -&gt; Maybe Timeout
+      -&gt; Maybe Bool
+      -&gt; Maybe CmdLogging
+      -&gt; Maybe CmdDisplay
+      -&gt; Maybe StripControl
+      -&gt; Maybe (Truncation 'TCmdName)
+      -&gt; Maybe LineTruncation
+      -&gt; Maybe FilePathDefault
+      -&gt; Maybe StripControl
+      -&gt; NonEmptySeq Text
+      -&gt; Args)
+forall (f :: Type -&gt; Type) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser (Maybe String)
+</span><a href="Shrun.Configuration.Args.html#configParser"><span class="hs-identifier hs-var">configParser</span></a></span><span>
+</span><span id="line-159"></span><span>    </span><span class="annot"><span class="annottext">Parser
+  (Bool
+   -&gt; Maybe Timeout
+   -&gt; Maybe Bool
+   -&gt; Maybe CmdLogging
+   -&gt; Maybe CmdDisplay
+   -&gt; Maybe StripControl
+   -&gt; Maybe (Truncation 'TCmdName)
+   -&gt; Maybe LineTruncation
+   -&gt; Maybe FilePathDefault
+   -&gt; Maybe StripControl
+   -&gt; NonEmptySeq Text
+   -&gt; Args)
+-&gt; Parser Bool
+-&gt; Parser
+     (Maybe Timeout
+      -&gt; Maybe Bool
+      -&gt; Maybe CmdLogging
+      -&gt; Maybe CmdDisplay
+      -&gt; Maybe StripControl
+      -&gt; Maybe (Truncation 'TCmdName)
+      -&gt; Maybe LineTruncation
+      -&gt; Maybe FilePathDefault
+      -&gt; Maybe StripControl
+      -&gt; NonEmptySeq Text
+      -&gt; Args)
+forall (f :: Type -&gt; Type) a b.
+Applicative f =&gt;
+f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser Bool
+</span><a href="Shrun.Configuration.Args.html#noConfigParser"><span class="hs-identifier hs-var">noConfigParser</span></a></span><span>
+</span><span id="line-160"></span><span>    </span><span class="annot"><span class="annottext">Parser
+  (Maybe Timeout
+   -&gt; Maybe Bool
+   -&gt; Maybe CmdLogging
+   -&gt; Maybe CmdDisplay
+   -&gt; Maybe StripControl
+   -&gt; Maybe (Truncation 'TCmdName)
+   -&gt; Maybe LineTruncation
+   -&gt; Maybe FilePathDefault
+   -&gt; Maybe StripControl
+   -&gt; NonEmptySeq Text
+   -&gt; Args)
+-&gt; Parser (Maybe Timeout)
+-&gt; Parser
+     (Maybe Bool
+      -&gt; Maybe CmdLogging
+      -&gt; Maybe CmdDisplay
+      -&gt; Maybe StripControl
+      -&gt; Maybe (Truncation 'TCmdName)
+      -&gt; Maybe LineTruncation
+      -&gt; Maybe FilePathDefault
+      -&gt; Maybe StripControl
+      -&gt; NonEmptySeq Text
+      -&gt; Args)
+forall (f :: Type -&gt; Type) a b.
+Applicative f =&gt;
+f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser (Maybe Timeout)
+</span><a href="Shrun.Configuration.Args.html#timeoutParser"><span class="hs-identifier hs-var">timeoutParser</span></a></span><span>
+</span><span id="line-161"></span><span>    </span><span class="annot"><span class="annottext">Parser
+  (Maybe Bool
+   -&gt; Maybe CmdLogging
+   -&gt; Maybe CmdDisplay
+   -&gt; Maybe StripControl
+   -&gt; Maybe (Truncation 'TCmdName)
+   -&gt; Maybe LineTruncation
+   -&gt; Maybe FilePathDefault
+   -&gt; Maybe StripControl
+   -&gt; NonEmptySeq Text
+   -&gt; Args)
+-&gt; Parser (Maybe Bool)
+-&gt; Parser
+     (Maybe CmdLogging
+      -&gt; Maybe CmdDisplay
+      -&gt; Maybe StripControl
+      -&gt; Maybe (Truncation 'TCmdName)
+      -&gt; Maybe LineTruncation
+      -&gt; Maybe FilePathDefault
+      -&gt; Maybe StripControl
+      -&gt; NonEmptySeq Text
+      -&gt; Args)
+forall (f :: Type -&gt; Type) a b.
+Applicative f =&gt;
+f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser (Maybe Bool)
+</span><a href="Shrun.Configuration.Args.html#disableLoggingParser"><span class="hs-identifier hs-var">disableLoggingParser</span></a></span><span>
+</span><span id="line-162"></span><span>    </span><span class="annot"><span class="annottext">Parser
+  (Maybe CmdLogging
+   -&gt; Maybe CmdDisplay
+   -&gt; Maybe StripControl
+   -&gt; Maybe (Truncation 'TCmdName)
+   -&gt; Maybe LineTruncation
+   -&gt; Maybe FilePathDefault
+   -&gt; Maybe StripControl
+   -&gt; NonEmptySeq Text
+   -&gt; Args)
+-&gt; Parser (Maybe CmdLogging)
+-&gt; Parser
+     (Maybe CmdDisplay
+      -&gt; Maybe StripControl
+      -&gt; Maybe (Truncation 'TCmdName)
+      -&gt; Maybe LineTruncation
+      -&gt; Maybe FilePathDefault
+      -&gt; Maybe StripControl
+      -&gt; NonEmptySeq Text
+      -&gt; Args)
+forall (f :: Type -&gt; Type) a b.
+Applicative f =&gt;
+f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser (Maybe CmdLogging)
+</span><a href="Shrun.Configuration.Args.html#commandLoggingParser"><span class="hs-identifier hs-var">commandLoggingParser</span></a></span><span>
+</span><span id="line-163"></span><span>    </span><span class="annot"><span class="annottext">Parser
+  (Maybe CmdDisplay
+   -&gt; Maybe StripControl
+   -&gt; Maybe (Truncation 'TCmdName)
+   -&gt; Maybe LineTruncation
+   -&gt; Maybe FilePathDefault
+   -&gt; Maybe StripControl
+   -&gt; NonEmptySeq Text
+   -&gt; Args)
+-&gt; Parser (Maybe CmdDisplay)
+-&gt; Parser
+     (Maybe StripControl
+      -&gt; Maybe (Truncation 'TCmdName)
+      -&gt; Maybe LineTruncation
+      -&gt; Maybe FilePathDefault
+      -&gt; Maybe StripControl
+      -&gt; NonEmptySeq Text
+      -&gt; Args)
+forall (f :: Type -&gt; Type) a b.
+Applicative f =&gt;
+f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser (Maybe CmdDisplay)
+</span><a href="Shrun.Configuration.Args.html#commandDisplayParser"><span class="hs-identifier hs-var">commandDisplayParser</span></a></span><span>
+</span><span id="line-164"></span><span>    </span><span class="annot"><span class="annottext">Parser
+  (Maybe StripControl
+   -&gt; Maybe (Truncation 'TCmdName)
+   -&gt; Maybe LineTruncation
+   -&gt; Maybe FilePathDefault
+   -&gt; Maybe StripControl
+   -&gt; NonEmptySeq Text
+   -&gt; Args)
+-&gt; Parser (Maybe StripControl)
+-&gt; Parser
+     (Maybe (Truncation 'TCmdName)
+      -&gt; Maybe LineTruncation
+      -&gt; Maybe FilePathDefault
+      -&gt; Maybe StripControl
+      -&gt; NonEmptySeq Text
+      -&gt; Args)
+forall (f :: Type -&gt; Type) a b.
+Applicative f =&gt;
+f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser (Maybe StripControl)
+</span><a href="Shrun.Configuration.Args.html#stripControlParser"><span class="hs-identifier hs-var">stripControlParser</span></a></span><span>
+</span><span id="line-165"></span><span>    </span><span class="annot"><span class="annottext">Parser
+  (Maybe (Truncation 'TCmdName)
+   -&gt; Maybe LineTruncation
+   -&gt; Maybe FilePathDefault
+   -&gt; Maybe StripControl
+   -&gt; NonEmptySeq Text
+   -&gt; Args)
+-&gt; Parser (Maybe (Truncation 'TCmdName))
+-&gt; Parser
+     (Maybe LineTruncation
+      -&gt; Maybe FilePathDefault
+      -&gt; Maybe StripControl
+      -&gt; NonEmptySeq Text
+      -&gt; Args)
+forall (f :: Type -&gt; Type) a b.
+Applicative f =&gt;
+f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser (Maybe (Truncation 'TCmdName))
+</span><a href="Shrun.Configuration.Args.html#cmdTruncationParser"><span class="hs-identifier hs-var">cmdTruncationParser</span></a></span><span>
+</span><span id="line-166"></span><span>    </span><span class="annot"><span class="annottext">Parser
+  (Maybe LineTruncation
+   -&gt; Maybe FilePathDefault
+   -&gt; Maybe StripControl
+   -&gt; NonEmptySeq Text
+   -&gt; Args)
+-&gt; Parser (Maybe LineTruncation)
+-&gt; Parser
+     (Maybe FilePathDefault
+      -&gt; Maybe StripControl -&gt; NonEmptySeq Text -&gt; Args)
+forall (f :: Type -&gt; Type) a b.
+Applicative f =&gt;
+f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser (Maybe LineTruncation)
+</span><a href="Shrun.Configuration.Args.html#lineTruncationParser"><span class="hs-identifier hs-var">lineTruncationParser</span></a></span><span>
+</span><span id="line-167"></span><span>    </span><span class="annot"><span class="annottext">Parser
+  (Maybe FilePathDefault
+   -&gt; Maybe StripControl -&gt; NonEmptySeq Text -&gt; Args)
+-&gt; Parser (Maybe FilePathDefault)
+-&gt; Parser (Maybe StripControl -&gt; NonEmptySeq Text -&gt; Args)
+forall (f :: Type -&gt; Type) a b.
+Applicative f =&gt;
+f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser (Maybe FilePathDefault)
+</span><a href="Shrun.Configuration.Args.html#fileLoggingParser"><span class="hs-identifier hs-var">fileLoggingParser</span></a></span><span>
+</span><span id="line-168"></span><span>    </span><span class="annot"><span class="annottext">Parser (Maybe StripControl -&gt; NonEmptySeq Text -&gt; Args)
+-&gt; Parser (Maybe StripControl) -&gt; Parser (NonEmptySeq Text -&gt; Args)
+forall (f :: Type -&gt; Type) a b.
+Applicative f =&gt;
+f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser (Maybe StripControl)
+</span><a href="Shrun.Configuration.Args.html#fileLogStripControlParser"><span class="hs-identifier hs-var">fileLogStripControlParser</span></a></span><span>
+</span><span id="line-169"></span><span>    </span><span class="annot"><span class="annottext">Parser (NonEmptySeq Text -&gt; Args)
+-&gt; Parser (NonEmptySeq Text) -&gt; Parser Args
+forall (f :: Type -&gt; Type) a b.
+Applicative f =&gt;
+f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser (NonEmptySeq Text)
+</span><a href="Shrun.Configuration.Args.html#commandsParser"><span class="hs-identifier hs-var">commandsParser</span></a></span><span>
+</span><span id="line-170"></span><span>    </span><span class="annot"><span class="annottext">Parser Args -&gt; Parser (Args -&gt; Args) -&gt; Parser Args
+forall (f :: Type -&gt; Type) a b.
+Applicative f =&gt;
+f a -&gt; f (a -&gt; b) -&gt; f b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%3C%2A%2A%3E"><span class="hs-operator hs-var">&lt;**&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser (Args -&gt; Args)
+forall a. Parser (a -&gt; a)
+</span><span class="hs-identifier hs-var">OA.helper</span></span><span>
+</span><span id="line-171"></span><span>    </span><span class="annot"><span class="annottext">Parser Args -&gt; Parser (Args -&gt; Args) -&gt; Parser Args
+forall (f :: Type -&gt; Type) a b.
+Applicative f =&gt;
+f a -&gt; f (a -&gt; b) -&gt; f b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%3C%2A%2A%3E"><span class="hs-operator hs-var">&lt;**&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser (Args -&gt; Args)
+forall a. Parser (a -&gt; a)
+</span><a href="Shrun.Configuration.Args.html#version"><span class="hs-identifier hs-var">version</span></a></span><span>
+</span><span id="line-172"></span><span>    </span><span class="annot"><span class="annottext">Parser Args -&gt; Parser (Args -&gt; Args) -&gt; Parser Args
+forall (f :: Type -&gt; Type) a b.
+Applicative f =&gt;
+f a -&gt; f (a -&gt; b) -&gt; f b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%3C%2A%2A%3E"><span class="hs-operator hs-var">&lt;**&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser (Args -&gt; Args)
+forall a. Parser (a -&gt; a)
+</span><a href="Shrun.Configuration.Args.html#defaultConfig"><span class="hs-identifier hs-var">defaultConfig</span></a></span><span>
+</span><span id="line-173"></span><span class="hs-pragma">{-# INLINEABLE</span><span> </span><span class="annot"><a href="Shrun.Configuration.Args.html#argsParser"><span class="hs-pragma hs-type">argsParser</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-174"></span><span>
+</span><span id="line-175"></span><span id="local-6989586621679232123"><span class="annot"><a href="Shrun.Configuration.Args.html#version"><span class="hs-identifier hs-type">version</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679232123"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679232123"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-176"></span><span id="version"><span class="annot"><span class="annottext">version :: forall a. Parser (a -&gt; a)
+</span><a href="Shrun.Configuration.Args.html#version"><span class="hs-identifier hs-var hs-var">version</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Mod OptionFields (a -&gt; a) -&gt; Parser (a -&gt; a)
+forall a. String -&gt; Mod OptionFields (a -&gt; a) -&gt; Parser (a -&gt; a)
+</span><span class="hs-identifier hs-var">OA.infoOption</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679232117"><span class="hs-identifier hs-var">txt</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; Mod OptionFields (a -&gt; a)
+forall (f :: Type -&gt; Type) a. HasName f =&gt; String -&gt; Mod f a
+</span><span class="hs-identifier hs-var">OA.long</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;version&quot;</span></span><span> </span><span class="annot"><span class="annottext">Mod OptionFields (a -&gt; a)
+-&gt; Mod OptionFields (a -&gt; a) -&gt; Mod OptionFields (a -&gt; a)
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Mod OptionFields (a -&gt; a)
+forall (f :: Type -&gt; Type) a. HasName f =&gt; Char -&gt; Mod f a
+</span><span class="hs-identifier hs-var">OA.short</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'v'</span></span><span class="hs-special">)</span><span>
+</span><span id="line-177"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-178"></span><span>    </span><span id="local-6989586621679232117"><span class="annot"><span class="annottext">txt :: String
+</span><a href="#local-6989586621679232117"><span class="hs-identifier hs-var hs-var">txt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-179"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; [String] -&gt; String
+forall a. [a] -&gt; [[a]] -&gt; [a]
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/Data.OldList.html#intercalate"><span class="hs-identifier hs-var">L.intercalate</span></a></span><span>
+</span><span id="line-180"></span><span>        </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;\n&quot;</span></span><span>
+</span><span id="line-181"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Shrun&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-182"></span><span>          </span><span class="annot"><span class="annottext">String
+</span><a href="Shrun.Configuration.Args.html#versNum"><span class="hs-identifier hs-var">versNum</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-183"></span><span>          </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Revision: &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="hs-special">$</span><span class="hs-special">(</span><span class="hs-identifier">GitRev.gitHash</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-184"></span><span>          </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Date: &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="hs-special">$</span><span class="hs-special">(</span><span class="hs-identifier">GitRev.gitCommitDate</span><span class="hs-special">)</span><span>
+</span><span id="line-185"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-186"></span><span>
+</span><span id="line-187"></span><span class="annot"><a href="Shrun.Configuration.Args.html#versNum"><span class="hs-identifier hs-type">versNum</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-188"></span><span id="versNum"><span class="annot"><span class="annottext">versNum :: String
+</span><a href="Shrun.Configuration.Args.html#versNum"><span class="hs-identifier hs-var hs-var">versNum</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Version: &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="hs-special">$$</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/m9la0ki982sinv33y7kmss4kgc10x2mh-package-version-0.1.0.0-doc/share/doc/package-version-0.1.0.0/html/src/Data.Version.Package.html#packageVersionStringTH"><span class="hs-identifier hs-type">PV.packageVersionStringTH</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;shrun.cabal&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-189"></span><span>
+</span><span id="line-190"></span><span id="local-6989586621679232103"><span class="annot"><a href="Shrun.Configuration.Args.html#defaultConfig"><span class="hs-identifier hs-type">defaultConfig</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679232103"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679232103"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-191"></span><span id="defaultConfig"><span class="annot"><span class="annottext">defaultConfig :: forall a. Parser (a -&gt; a)
+</span><a href="Shrun.Configuration.Args.html#defaultConfig"><span class="hs-identifier hs-var hs-var">defaultConfig</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Mod OptionFields (a -&gt; a) -&gt; Parser (a -&gt; a)
+forall a. String -&gt; Mod OptionFields (a -&gt; a) -&gt; Parser (a -&gt; a)
+</span><span class="hs-identifier hs-var">OA.infoOption</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; String
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/text-1.2.5.0/src/Data.Text.Show.html#unpack"><span class="hs-identifier hs-var">unpack</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679232099"><span class="hs-identifier hs-var">txt</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; Mod OptionFields (a -&gt; a)
+forall (f :: Type -&gt; Type) a. HasName f =&gt; String -&gt; Mod f a
+</span><span class="hs-identifier hs-var">OA.long</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;default-config&quot;</span></span><span> </span><span class="annot"><span class="annottext">Mod OptionFields (a -&gt; a)
+-&gt; Mod OptionFields (a -&gt; a) -&gt; Mod OptionFields (a -&gt; a)
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Mod OptionFields (a -&gt; a)
+forall (f :: Type -&gt; Type) a. String -&gt; Mod f a
+</span><span class="hs-identifier hs-var">OA.help</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679232097"><span class="hs-identifier hs-var">help</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-192"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-193"></span><span>    </span><span id="local-6989586621679232099"><span class="annot"><span class="annottext">txt :: Text
+</span><a href="#local-6989586621679232099"><span class="hs-identifier hs-var hs-var">txt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; Text
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/text-1.2.5.0/src/Data.Text.html#unlines"><span class="hs-identifier hs-var">T.unlines</span></a></span><span> </span><span class="hs-special">$$</span><span class="hs-special">(</span><span class="annot"><a href="Shrun.Configuration.Args.TH.html#getDefaultConfigTH"><span class="hs-identifier hs-type">getDefaultConfigTH</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-194"></span><span>    </span><span id="local-6989586621679232097"><span class="annot"><span class="annottext">help :: String
+</span><a href="#local-6989586621679232097"><span class="hs-identifier hs-var hs-var">help</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Writes a default config.toml file to stdout.&quot;</span></span><span>
+</span><span id="line-195"></span><span>
+</span><span id="line-196"></span><span class="annot"><a href="Shrun.Configuration.Args.html#configParser"><span class="hs-identifier hs-type">configParser</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-197"></span><span id="configParser"><span class="annot"><span class="annottext">configParser :: Parser (Maybe String)
+</span><a href="Shrun.Configuration.Args.html#configParser"><span class="hs-identifier hs-var hs-var">configParser</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-198"></span><span>  </span><span class="annot"><span class="annottext">Parser String -&gt; Parser (Maybe String)
+forall (f :: Type -&gt; Type) a. Alternative f =&gt; f a -&gt; f (Maybe a)
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/Control.Applicative.html#optional"><span class="hs-identifier hs-var">OA.optional</span></a></span><span> </span><span class="annot"><span class="annottext">(Parser String -&gt; Parser (Maybe String))
+-&gt; Parser String -&gt; Parser (Maybe String)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-199"></span><span>    </span><span class="annot"><span class="annottext">ReadM String -&gt; Mod OptionFields String -&gt; Parser String
+forall a. ReadM a -&gt; Mod OptionFields a -&gt; Parser a
+</span><span class="hs-identifier hs-var">OA.option</span></span><span>
+</span><span id="line-200"></span><span>      </span><span class="annot"><span class="annottext">ReadM String
+forall s. IsString s =&gt; ReadM s
+</span><span class="hs-identifier hs-var">OA.str</span></span><span>
+</span><span id="line-201"></span><span>      </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">[Mod OptionFields String] -&gt; Mod OptionFields String
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span>
+</span><span id="line-202"></span><span>          </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String -&gt; Mod OptionFields String
+forall (f :: Type -&gt; Type) a. HasName f =&gt; String -&gt; Mod f a
+</span><span class="hs-identifier hs-var">OA.long</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;config&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-203"></span><span>            </span><span class="annot"><span class="annottext">Char -&gt; Mod OptionFields String
+forall (f :: Type -&gt; Type) a. HasName f =&gt; Char -&gt; Mod f a
+</span><span class="hs-identifier hs-var">OA.short</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'c'</span></span><span class="hs-special">,</span><span>
+</span><span id="line-204"></span><span>            </span><span class="annot"><span class="annottext">String -&gt; Mod OptionFields String
+forall (f :: Type -&gt; Type) a. String -&gt; Mod f a
+</span><span class="hs-identifier hs-var">OA.help</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679232090"><span class="hs-identifier hs-var">helpTxt</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-205"></span><span>            </span><span class="annot"><span class="annottext">String -&gt; Mod OptionFields String
+forall (f :: Type -&gt; Type) a. HasMetavar f =&gt; String -&gt; Mod f a
+</span><span class="hs-identifier hs-var">OA.metavar</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;PATH&quot;</span></span><span>
+</span><span id="line-206"></span><span>          </span><span class="hs-special">]</span><span>
+</span><span id="line-207"></span><span>      </span><span class="hs-special">)</span><span>
+</span><span id="line-208"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-209"></span><span>    </span><span id="local-6989586621679232090"><span class="annot"><span class="annottext">helpTxt :: String
+</span><a href="#local-6989586621679232090"><span class="hs-identifier hs-var hs-var">helpTxt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-210"></span><span>      </span><span class="annot"><span class="annottext">[String] -&gt; String
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span>
+</span><span id="line-211"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Path to TOML config file. If this argument is not given &quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-212"></span><span>          </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;we automatically look in the Xdg config directory &quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-213"></span><span>          </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;e.g. ~/.config/shrun/config.toml&quot;</span></span><span>
+</span><span id="line-214"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-215"></span><span>
+</span><span id="line-216"></span><span class="annot"><a href="Shrun.Configuration.Args.html#noConfigParser"><span class="hs-identifier hs-type">noConfigParser</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/ghc-prim-0.8.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-217"></span><span id="noConfigParser"><span class="annot"><span class="annottext">noConfigParser :: Parser Bool
+</span><a href="Shrun.Configuration.Args.html#noConfigParser"><span class="hs-identifier hs-var hs-var">noConfigParser</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-218"></span><span>  </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Mod FlagFields Bool -&gt; Parser Bool
+forall a. a -&gt; a -&gt; Mod FlagFields a -&gt; Parser a
+</span><span class="hs-identifier hs-var">OA.flag</span></span><span>
+</span><span id="line-219"></span><span>    </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/ghc-prim-0.8.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-220"></span><span>    </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/ghc-prim-0.8.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-221"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">[Mod FlagFields Bool] -&gt; Mod FlagFields Bool
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span>
+</span><span id="line-222"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String -&gt; Mod FlagFields Bool
+forall (f :: Type -&gt; Type) a. HasName f =&gt; String -&gt; Mod f a
+</span><span class="hs-identifier hs-var">OA.long</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;no-config&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-223"></span><span>          </span><span class="annot"><span class="annottext">String -&gt; Mod FlagFields Bool
+forall (f :: Type -&gt; Type) a. String -&gt; Mod f a
+</span><span class="hs-identifier hs-var">OA.help</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679232082"><span class="hs-identifier hs-var">helpTxt</span></a></span><span>
+</span><span id="line-224"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-225"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-226"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-227"></span><span>    </span><span id="local-6989586621679232082"><span class="annot"><span class="annottext">helpTxt :: String
+</span><a href="#local-6989586621679232082"><span class="hs-identifier hs-var hs-var">helpTxt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-228"></span><span>      </span><span class="annot"><span class="annottext">[String] -&gt; String
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span>
+</span><span id="line-229"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Overrides toml file config regardless of how it was obtained i.e. &quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-230"></span><span>          </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;explicit --config or implicit reading of the Xdg config file. &quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-231"></span><span>          </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Used for when a config file exists at the expected Xdg &quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-232"></span><span>          </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;location, but we want to ignore it.&quot;</span></span><span>
+</span><span id="line-233"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-234"></span><span>
+</span><span id="line-235"></span><span class="annot"><a href="Shrun.Configuration.Args.html#timeoutParser"><span class="hs-identifier hs-type">timeoutParser</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Shrun.Data.Timeout.html#Timeout"><span class="hs-identifier hs-type">Timeout</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-236"></span><span id="timeoutParser"><span class="annot"><span class="annottext">timeoutParser :: Parser (Maybe Timeout)
+</span><a href="Shrun.Configuration.Args.html#timeoutParser"><span class="hs-identifier hs-var hs-var">timeoutParser</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-237"></span><span>  </span><span class="annot"><span class="annottext">Parser Timeout -&gt; Parser (Maybe Timeout)
+forall (f :: Type -&gt; Type) a. Alternative f =&gt; f a -&gt; f (Maybe a)
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/Control.Applicative.html#optional"><span class="hs-identifier hs-var">OA.optional</span></a></span><span> </span><span class="annot"><span class="annottext">(Parser Timeout -&gt; Parser (Maybe Timeout))
+-&gt; Parser Timeout -&gt; Parser (Maybe Timeout)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-238"></span><span>    </span><span class="annot"><span class="annottext">ReadM Timeout -&gt; Mod OptionFields Timeout -&gt; Parser Timeout
+forall a. ReadM a -&gt; Mod OptionFields a -&gt; Parser a
+</span><span class="hs-identifier hs-var">OA.option</span></span><span>
+</span><span id="line-239"></span><span>      </span><span class="annot"><span class="annottext">ReadM Timeout
+</span><a href="Shrun.Configuration.Args.html#readTimeout"><span class="hs-identifier hs-var">readTimeout</span></a></span><span>
+</span><span id="line-240"></span><span>      </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">[Mod OptionFields Timeout] -&gt; Mod OptionFields Timeout
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span>
+</span><span id="line-241"></span><span>          </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String -&gt; Mod OptionFields Timeout
+forall (f :: Type -&gt; Type) a. HasName f =&gt; String -&gt; Mod f a
+</span><span class="hs-identifier hs-var">OA.long</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;timeout&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-242"></span><span>            </span><span class="annot"><span class="annottext">Char -&gt; Mod OptionFields Timeout
+forall (f :: Type -&gt; Type) a. HasName f =&gt; Char -&gt; Mod f a
+</span><span class="hs-identifier hs-var">OA.short</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'t'</span></span><span class="hs-special">,</span><span>
+</span><span id="line-243"></span><span>            </span><span class="annot"><span class="annottext">String -&gt; Mod OptionFields Timeout
+forall (f :: Type -&gt; Type) a. String -&gt; Mod f a
+</span><span class="hs-identifier hs-var">OA.help</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679232075"><span class="hs-identifier hs-var">helpTxt</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-244"></span><span>            </span><span class="annot"><span class="annottext">String -&gt; Mod OptionFields Timeout
+forall (f :: Type -&gt; Type) a. HasMetavar f =&gt; String -&gt; Mod f a
+</span><span class="hs-identifier hs-var">OA.metavar</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;NATURAL&quot;</span></span><span>
+</span><span id="line-245"></span><span>          </span><span class="hs-special">]</span><span>
+</span><span id="line-246"></span><span>      </span><span class="hs-special">)</span><span>
+</span><span id="line-247"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-248"></span><span>    </span><span id="local-6989586621679232075"><span class="annot"><span class="annottext">helpTxt :: String
+</span><a href="#local-6989586621679232075"><span class="hs-identifier hs-var hs-var">helpTxt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-249"></span><span>      </span><span class="annot"><span class="annottext">[String] -&gt; String
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span>
+</span><span id="line-250"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Non-negative integer setting a timeout. Can either be a raw number &quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-251"></span><span>          </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;(interpreted as seconds), or a \&quot;time string\&quot; e.g. 1d2h3m4s or &quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-252"></span><span>          </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;2h3s. Defaults to no timeout.&quot;</span></span><span>
+</span><span id="line-253"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-254"></span><span>
+</span><span id="line-255"></span><span class="annot"><a href="Shrun.Configuration.Args.html#readTimeout"><span class="hs-identifier hs-type">readTimeout</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ReadM</span></span><span> </span><span class="annot"><a href="Shrun.Data.Timeout.html#Timeout"><span class="hs-identifier hs-type">Timeout</span></a></span><span>
+</span><span id="line-256"></span><span id="readTimeout"><span class="annot"><span class="annottext">readTimeout :: ReadM Timeout
+</span><a href="Shrun.Configuration.Args.html#readTimeout"><span class="hs-identifier hs-var hs-var">readTimeout</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-257"></span><span>  </span><span id="local-6989586621679232070"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679232070"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ReadM String
+forall s. IsString s =&gt; ReadM s
+</span><span class="hs-identifier hs-var">OA.str</span></span><span>
+</span><span id="line-258"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">String -&gt; Either String RelativeTime
+</span><span class="hs-identifier hs-var">RelativeTime.fromString</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679232070"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-259"></span><span>    </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-260"></span><span>      </span><span class="annot"><span class="annottext">ParseError -&gt; ReadM Timeout
+forall a. ParseError -&gt; ReadM a
+</span><span class="hs-identifier hs-var">OA.readerAbort</span></span><span> </span><span class="annot"><span class="annottext">(ParseError -&gt; ReadM Timeout) -&gt; ParseError -&gt; ReadM Timeout
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-261"></span><span>        </span><span class="annot"><span class="annottext">String -&gt; ParseError
+</span><span class="hs-identifier hs-var">ErrorMsg</span></span><span> </span><span class="annot"><span class="annottext">(String -&gt; ParseError) -&gt; String -&gt; ParseError
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-262"></span><span>          </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Could not parse timeout: &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679232070"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-263"></span><span>    </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621679232067"><span class="annot"><span class="annottext">RelativeTime
+</span><a href="#local-6989586621679232067"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Timeout -&gt; ReadM Timeout
+forall (f :: Type -&gt; Type) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(Timeout -&gt; ReadM Timeout) -&gt; Timeout -&gt; ReadM Timeout
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Natural -&gt; Timeout
+</span><a href="Shrun.Data.Timeout.html#MkTimeout"><span class="hs-identifier hs-var">MkTimeout</span></a></span><span> </span><span class="annot"><span class="annottext">(Natural -&gt; Timeout) -&gt; Natural -&gt; Timeout
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">RelativeTime -&gt; Natural
+</span><span class="hs-identifier hs-var">RelativeTime.toSeconds</span></span><span> </span><span class="annot"><span class="annottext">RelativeTime
+</span><a href="#local-6989586621679232067"><span class="hs-identifier hs-var">t</span></a></span><span>
+</span><span id="line-264"></span><span>
+</span><span id="line-265"></span><span class="annot"><a href="Shrun.Configuration.Args.html#cmdTruncationParser"><span class="hs-identifier hs-type">cmdTruncationParser</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Shrun.Configuration.Env.Types.html#Truncation"><span class="hs-identifier hs-type">Truncation</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="Shrun.Configuration.Env.Types.html#TCmdName"><span class="hs-identifier hs-type">TCmdName</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-266"></span><span id="cmdTruncationParser"><span class="annot"><span class="annottext">cmdTruncationParser :: Parser (Maybe (Truncation 'TCmdName))
+</span><a href="Shrun.Configuration.Args.html#cmdTruncationParser"><span class="hs-identifier hs-var hs-var">cmdTruncationParser</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-267"></span><span>  </span><span class="annot"><span class="annottext">Parser (Truncation 'TCmdName)
+-&gt; Parser (Maybe (Truncation 'TCmdName))
+forall (f :: Type -&gt; Type) a. Alternative f =&gt; f a -&gt; f (Maybe a)
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/Control.Applicative.html#optional"><span class="hs-identifier hs-var">OA.optional</span></a></span><span> </span><span class="annot"><span class="annottext">(Parser (Truncation 'TCmdName)
+ -&gt; Parser (Maybe (Truncation 'TCmdName)))
+-&gt; Parser (Truncation 'TCmdName)
+-&gt; Parser (Maybe (Truncation 'TCmdName))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-268"></span><span>    </span><span class="annot"><span class="annottext">ReadM (Truncation 'TCmdName)
+-&gt; Mod OptionFields (Truncation 'TCmdName)
+-&gt; Parser (Truncation 'TCmdName)
+forall a. ReadM a -&gt; Mod OptionFields a -&gt; Parser a
+</span><span class="hs-identifier hs-var">OA.option</span></span><span>
+</span><span id="line-269"></span><span>      </span><span class="annot"><span class="annottext">ReadM (Truncation 'TCmdName)
+forall (a :: TruncRegion). ReadM (Truncation a)
+</span><a href="Shrun.Configuration.Args.html#readTruncation"><span class="hs-identifier hs-var">readTruncation</span></a></span><span>
+</span><span id="line-270"></span><span>      </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">[Mod OptionFields (Truncation 'TCmdName)]
+-&gt; Mod OptionFields (Truncation 'TCmdName)
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span>
+</span><span id="line-271"></span><span>          </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String -&gt; Mod OptionFields (Truncation 'TCmdName)
+forall (f :: Type -&gt; Type) a. HasName f =&gt; String -&gt; Mod f a
+</span><span class="hs-identifier hs-var">OA.long</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;cmd-name-trunc&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-272"></span><span>            </span><span class="annot"><span class="annottext">Char -&gt; Mod OptionFields (Truncation 'TCmdName)
+forall (f :: Type -&gt; Type) a. HasName f =&gt; Char -&gt; Mod f a
+</span><span class="hs-identifier hs-var">OA.short</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'x'</span></span><span class="hs-special">,</span><span>
+</span><span id="line-273"></span><span>            </span><span class="annot"><span class="annottext">String -&gt; Mod OptionFields (Truncation 'TCmdName)
+forall (f :: Type -&gt; Type) a. String -&gt; Mod f a
+</span><span class="hs-identifier hs-var">OA.help</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679232063"><span class="hs-identifier hs-var">helpTxt</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-274"></span><span>            </span><span class="annot"><span class="annottext">String -&gt; Mod OptionFields (Truncation 'TCmdName)
+forall (f :: Type -&gt; Type) a. HasMetavar f =&gt; String -&gt; Mod f a
+</span><span class="hs-identifier hs-var">OA.metavar</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;NATURAL&quot;</span></span><span>
+</span><span id="line-275"></span><span>          </span><span class="hs-special">]</span><span>
+</span><span id="line-276"></span><span>      </span><span class="hs-special">)</span><span>
+</span><span id="line-277"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-278"></span><span>    </span><span id="local-6989586621679232063"><span class="annot"><span class="annottext">helpTxt :: String
+</span><a href="#local-6989586621679232063"><span class="hs-identifier hs-var hs-var">helpTxt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-279"></span><span>      </span><span class="annot"><span class="annottext">[String] -&gt; String
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span>
+</span><span id="line-280"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Non-negative integer that limits the length of commands/key-names &quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-281"></span><span>          </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;in the console logs. Defaults to no truncation. This affects &quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-282"></span><span>          </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;everywhere the command/key-name shows up (i.e. in command logs or &quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-283"></span><span>          </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;final success/error message); File logs created via --file-log &quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-284"></span><span>          </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;are unaffected.&quot;</span></span><span>
+</span><span id="line-285"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-286"></span><span class="hs-pragma">{-# INLINEABLE</span><span> </span><span class="annot"><a href="Shrun.Configuration.Args.html#cmdTruncationParser"><span class="hs-pragma hs-type">cmdTruncationParser</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-287"></span><span>
+</span><span id="line-288"></span><span class="annot"><a href="Shrun.Configuration.Args.html#lineTruncationParser"><span class="hs-identifier hs-type">lineTruncationParser</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Shrun.Configuration.Env.Types.html#LineTruncation"><span class="hs-identifier hs-type">LineTruncation</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-289"></span><span id="lineTruncationParser"><span class="annot"><span class="annottext">lineTruncationParser :: Parser (Maybe LineTruncation)
+</span><a href="Shrun.Configuration.Args.html#lineTruncationParser"><span class="hs-identifier hs-var hs-var">lineTruncationParser</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-290"></span><span>  </span><span class="annot"><span class="annottext">Parser LineTruncation -&gt; Parser (Maybe LineTruncation)
+forall (f :: Type -&gt; Type) a. Alternative f =&gt; f a -&gt; f (Maybe a)
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/Control.Applicative.html#optional"><span class="hs-identifier hs-var">OA.optional</span></a></span><span> </span><span class="annot"><span class="annottext">(Parser LineTruncation -&gt; Parser (Maybe LineTruncation))
+-&gt; Parser LineTruncation -&gt; Parser (Maybe LineTruncation)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-291"></span><span>    </span><span class="annot"><span class="annottext">ReadM LineTruncation
+-&gt; Mod OptionFields LineTruncation -&gt; Parser LineTruncation
+forall a. ReadM a -&gt; Mod OptionFields a -&gt; Parser a
+</span><span class="hs-identifier hs-var">OA.option</span></span><span>
+</span><span id="line-292"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ReadM LineTruncation
+</span><a href="#local-6989586621679232056"><span class="hs-identifier hs-var">defRead</span></a></span><span> </span><span class="annot"><span class="annottext">ReadM LineTruncation
+-&gt; ReadM LineTruncation -&gt; ReadM LineTruncation
+forall (f :: Type -&gt; Type) a. Alternative f =&gt; f a -&gt; f a -&gt; f a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%3C%7C%3E"><span class="hs-operator hs-var">&lt;|&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ReadM LineTruncation
+</span><a href="Shrun.Configuration.Args.html#readDetectTruncation"><span class="hs-identifier hs-var">readDetectTruncation</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-293"></span><span>      </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">[Mod OptionFields LineTruncation]
+-&gt; Mod OptionFields LineTruncation
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span>
+</span><span id="line-294"></span><span>          </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String -&gt; Mod OptionFields LineTruncation
+forall (f :: Type -&gt; Type) a. HasName f =&gt; String -&gt; Mod f a
+</span><span class="hs-identifier hs-var">OA.long</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;cmd-line-trunc&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-295"></span><span>            </span><span class="annot"><span class="annottext">Char -&gt; Mod OptionFields LineTruncation
+forall (f :: Type -&gt; Type) a. HasName f =&gt; Char -&gt; Mod f a
+</span><span class="hs-identifier hs-var">OA.short</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'y'</span></span><span class="hs-special">,</span><span>
+</span><span id="line-296"></span><span>            </span><span class="annot"><span class="annottext">String -&gt; Mod OptionFields LineTruncation
+forall (f :: Type -&gt; Type) a. String -&gt; Mod f a
+</span><span class="hs-identifier hs-var">OA.help</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679232053"><span class="hs-identifier hs-var">helpTxt</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-297"></span><span>            </span><span class="annot"><span class="annottext">String -&gt; Mod OptionFields LineTruncation
+forall (f :: Type -&gt; Type) a. HasMetavar f =&gt; String -&gt; Mod f a
+</span><span class="hs-identifier hs-var">OA.metavar</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&lt;NATURAL | detect&gt;&quot;</span></span><span>
+</span><span id="line-298"></span><span>          </span><span class="hs-special">]</span><span>
+</span><span id="line-299"></span><span>      </span><span class="hs-special">)</span><span>
+</span><span id="line-300"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-301"></span><span>    </span><span id="local-6989586621679232056"><span class="annot"><span class="annottext">defRead :: ReadM LineTruncation
+</span><a href="#local-6989586621679232056"><span class="hs-identifier hs-var hs-var">defRead</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Truncation 'TCmdLine -&gt; LineTruncation
+</span><a href="Shrun.Configuration.Env.Types.html#Undetected"><span class="hs-identifier hs-var">Undetected</span></a></span><span> </span><span class="annot"><span class="annottext">(Truncation 'TCmdLine -&gt; LineTruncation)
+-&gt; ReadM (Truncation 'TCmdLine) -&gt; ReadM LineTruncation
+forall (f :: Type -&gt; Type) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ReadM (Truncation 'TCmdLine)
+forall (a :: TruncRegion). ReadM (Truncation a)
+</span><a href="Shrun.Configuration.Args.html#readTruncation"><span class="hs-identifier hs-var">readTruncation</span></a></span><span>
+</span><span id="line-302"></span><span>    </span><span id="local-6989586621679232053"><span class="annot"><span class="annottext">helpTxt :: String
+</span><a href="#local-6989586621679232053"><span class="hs-identifier hs-var hs-var">helpTxt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-303"></span><span>      </span><span class="annot"><span class="annottext">[String] -&gt; String
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span>
+</span><span id="line-304"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Non-negative integer that limits the length of logs &quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-305"></span><span>          </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;produced via --cmd-log in the console logs. Can also be the &quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-306"></span><span>          </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;string literal 'detect', to detect the terminal size &quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-307"></span><span>          </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;automatically. Defaults to no truncation. This does &quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-308"></span><span>          </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;not affect file logs with --file-log.&quot;</span></span><span>
+</span><span id="line-309"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-310"></span><span>
+</span><span id="line-311"></span><span id="local-6989586621679232740"><span class="annot"><a href="Shrun.Configuration.Args.html#readTruncation"><span class="hs-identifier hs-type">readTruncation</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ReadM</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Shrun.Configuration.Env.Types.html#Truncation"><span class="hs-identifier hs-type">Truncation</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679232740"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-312"></span><span id="readTruncation"><span class="annot"><span class="annottext">readTruncation :: forall (a :: TruncRegion). ReadM (Truncation a)
+</span><a href="Shrun.Configuration.Args.html#readTruncation"><span class="hs-identifier hs-var hs-var">readTruncation</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; Truncation a
+forall (a :: TruncRegion). Natural -&gt; Truncation a
+</span><a href="Shrun.Configuration.Env.Types.html#MkTruncation"><span class="hs-identifier hs-var">MkTruncation</span></a></span><span> </span><span class="annot"><span class="annottext">(Natural -&gt; Truncation a) -&gt; ReadM Natural -&gt; ReadM (Truncation a)
+forall (f :: Type -&gt; Type) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ReadM Natural
+forall a. Read a =&gt; ReadM a
+</span><span class="hs-identifier hs-var">OA.auto</span></span><span>
+</span><span id="line-313"></span><span class="hs-pragma">{-# INLINEABLE</span><span> </span><span class="annot"><a href="Shrun.Configuration.Args.html#readTruncation"><span class="hs-pragma hs-type">readTruncation</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-314"></span><span>
+</span><span id="line-315"></span><span class="annot"><a href="Shrun.Configuration.Args.html#readDetectTruncation"><span class="hs-identifier hs-type">readDetectTruncation</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ReadM</span></span><span> </span><span class="annot"><a href="Shrun.Configuration.Env.Types.html#LineTruncation"><span class="hs-identifier hs-type">LineTruncation</span></a></span><span>
+</span><span id="line-316"></span><span id="readDetectTruncation"><span class="annot"><span class="annottext">readDetectTruncation :: ReadM LineTruncation
+</span><a href="Shrun.Configuration.Args.html#readDetectTruncation"><span class="hs-identifier hs-var hs-var">readDetectTruncation</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-317"></span><span>  </span><span class="annot"><span class="annottext">ReadM Text
+forall s. IsString s =&gt; ReadM s
+</span><span class="hs-identifier hs-var">OA.str</span></span><span> </span><span class="annot"><span class="annottext">ReadM Text
+-&gt; (Text -&gt; ReadM LineTruncation) -&gt; ReadM LineTruncation
+forall (m :: Type -&gt; Type) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/text-1.2.5.0/src/Data.Text.html#toCaseFold"><span class="hs-identifier hs-var">T.toCaseFold</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Text)
+-&gt; (Text -&gt; ReadM LineTruncation) -&gt; Text -&gt; ReadM LineTruncation
+forall a b c. (a -&gt; b) -&gt; (b -&gt; c) -&gt; a -&gt; c
+</span><a href="Shrun.Prelude.html#.%3E"><span class="hs-operator hs-var">.&gt;</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-318"></span><span>    </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;detect&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">LineTruncation -&gt; ReadM LineTruncation
+forall (f :: Type -&gt; Type) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">LineTruncation
+</span><a href="Shrun.Configuration.Env.Types.html#Detected"><span class="hs-identifier hs-var">Detected</span></a></span><span>
+</span><span id="line-319"></span><span>    </span><span id="local-6989586621679232035"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679232035"><span class="hs-identifier hs-var">bad</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-320"></span><span>      </span><span class="annot"><span class="annottext">ParseError -&gt; ReadM LineTruncation
+forall a. ParseError -&gt; ReadM a
+</span><span class="hs-identifier hs-var">OA.readerAbort</span></span><span> </span><span class="annot"><span class="annottext">(ParseError -&gt; ReadM LineTruncation)
+-&gt; ParseError -&gt; ReadM LineTruncation
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-321"></span><span>        </span><span class="annot"><span class="annottext">String -&gt; ParseError
+</span><span class="hs-identifier hs-var">ErrorMsg</span></span><span> </span><span class="annot"><span class="annottext">(String -&gt; ParseError) -&gt; String -&gt; ParseError
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-322"></span><span>          </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Unrecognized truncation option:&quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; String
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/text-1.2.5.0/src/Data.Text.Show.html#unpack"><span class="hs-identifier hs-var">unpack</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679232035"><span class="hs-identifier hs-var">bad</span></a></span><span>
+</span><span id="line-323"></span><span>
+</span><span id="line-324"></span><span class="annot"><a href="Shrun.Configuration.Args.html#stripControlParser"><span class="hs-identifier hs-type">stripControlParser</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Shrun.Configuration.Env.Types.html#StripControl"><span class="hs-identifier hs-type">StripControl</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-325"></span><span id="stripControlParser"><span class="annot"><span class="annottext">stripControlParser :: Parser (Maybe StripControl)
+</span><a href="Shrun.Configuration.Args.html#stripControlParser"><span class="hs-identifier hs-var hs-var">stripControlParser</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-326"></span><span>  </span><span class="annot"><span class="annottext">Parser StripControl -&gt; Parser (Maybe StripControl)
+forall (f :: Type -&gt; Type) a. Alternative f =&gt; f a -&gt; f (Maybe a)
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/Control.Applicative.html#optional"><span class="hs-identifier hs-var">OA.optional</span></a></span><span> </span><span class="annot"><span class="annottext">(Parser StripControl -&gt; Parser (Maybe StripControl))
+-&gt; Parser StripControl -&gt; Parser (Maybe StripControl)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-327"></span><span>    </span><span class="annot"><span class="annottext">ReadM StripControl
+-&gt; Mod OptionFields StripControl -&gt; Parser StripControl
+forall a. ReadM a -&gt; Mod OptionFields a -&gt; Parser a
+</span><span class="hs-identifier hs-var">OA.option</span></span><span>
+</span><span id="line-328"></span><span>      </span><span class="annot"><span class="annottext">ReadM StripControl
+</span><a href="Shrun.Configuration.Args.html#readStripControl"><span class="hs-identifier hs-var">readStripControl</span></a></span><span>
+</span><span id="line-329"></span><span>      </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">[Mod OptionFields StripControl] -&gt; Mod OptionFields StripControl
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span>
+</span><span id="line-330"></span><span>          </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String -&gt; Mod OptionFields StripControl
+forall (f :: Type -&gt; Type) a. HasName f =&gt; String -&gt; Mod f a
+</span><span class="hs-identifier hs-var">OA.long</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;strip-control&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-331"></span><span>            </span><span class="annot"><span class="annottext">Char -&gt; Mod OptionFields StripControl
+forall (f :: Type -&gt; Type) a. HasName f =&gt; Char -&gt; Mod f a
+</span><span class="hs-identifier hs-var">OA.short</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'s'</span></span><span class="hs-special">,</span><span>
+</span><span id="line-332"></span><span>            </span><span class="annot"><span class="annottext">String -&gt; Mod OptionFields StripControl
+forall (f :: Type -&gt; Type) a. String -&gt; Mod f a
+</span><span class="hs-identifier hs-var">OA.help</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679232033"><span class="hs-identifier hs-var">helpTxt</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-333"></span><span>            </span><span class="annot"><span class="annottext">String -&gt; Mod OptionFields StripControl
+forall (f :: Type -&gt; Type) a. HasMetavar f =&gt; String -&gt; Mod f a
+</span><span class="hs-identifier hs-var">OA.metavar</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&lt;all | smart | none&gt;&quot;</span></span><span>
+</span><span id="line-334"></span><span>          </span><span class="hs-special">]</span><span>
+</span><span id="line-335"></span><span>      </span><span class="hs-special">)</span><span>
+</span><span id="line-336"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-337"></span><span>    </span><span id="local-6989586621679232033"><span class="annot"><span class="annottext">helpTxt :: String
+</span><a href="#local-6989586621679232033"><span class="hs-identifier hs-var hs-var">helpTxt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-338"></span><span>      </span><span class="annot"><span class="annottext">[String] -&gt; String
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span>
+</span><span id="line-339"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Control characters can wreak layout havoc with the --cmd-log&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-340"></span><span>          </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot; option, thus we include this option. 'all' strips all&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-341"></span><span>          </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot; such chars. 'none' does nothing i.e. all chars are left&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-342"></span><span>          </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot; untouched. The default 'smart' attempts to strip&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-343"></span><span>          </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot; only the control chars that affect layout (e.g. cursor movements) and&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-344"></span><span>          </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot; leaves others unaffected (e.g. colors). This has the potential&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-345"></span><span>          </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot; to be the 'prettiest' though it is possible to miss some chars.&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-346"></span><span>          </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot; This option is experimental and subject to change.&quot;</span></span><span>
+</span><span id="line-347"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-348"></span><span>
+</span><span id="line-349"></span><span class="annot"><a href="Shrun.Configuration.Args.html#readStripControl"><span class="hs-identifier hs-type">readStripControl</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ReadM</span></span><span> </span><span class="annot"><a href="Shrun.Configuration.Env.Types.html#StripControl"><span class="hs-identifier hs-type">StripControl</span></a></span><span>
+</span><span id="line-350"></span><span id="readStripControl"><span class="annot"><span class="annottext">readStripControl :: ReadM StripControl
+</span><a href="Shrun.Configuration.Args.html#readStripControl"><span class="hs-identifier hs-var hs-var">readStripControl</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-351"></span><span>  </span><span class="annot"><span class="annottext">ReadM Text
+forall s. IsString s =&gt; ReadM s
+</span><span class="hs-identifier hs-var">OA.str</span></span><span> </span><span class="annot"><span class="annottext">ReadM Text -&gt; (Text -&gt; ReadM StripControl) -&gt; ReadM StripControl
+forall (m :: Type -&gt; Type) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/text-1.2.5.0/src/Data.Text.html#toCaseFold"><span class="hs-identifier hs-var">T.toCaseFold</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Text)
+-&gt; (Text -&gt; ReadM StripControl) -&gt; Text -&gt; ReadM StripControl
+forall a b c. (a -&gt; b) -&gt; (b -&gt; c) -&gt; a -&gt; c
+</span><a href="Shrun.Prelude.html#.%3E"><span class="hs-operator hs-var">.&gt;</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-352"></span><span>    </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;all&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">StripControl -&gt; ReadM StripControl
+forall (f :: Type -&gt; Type) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">StripControl
+</span><a href="Shrun.Configuration.Env.Types.html#StripControlAll"><span class="hs-identifier hs-var">StripControlAll</span></a></span><span>
+</span><span id="line-353"></span><span>    </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;none&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">StripControl -&gt; ReadM StripControl
+forall (f :: Type -&gt; Type) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">StripControl
+</span><a href="Shrun.Configuration.Env.Types.html#StripControlNone"><span class="hs-identifier hs-var">StripControlNone</span></a></span><span>
+</span><span id="line-354"></span><span>    </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;smart&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">StripControl -&gt; ReadM StripControl
+forall (f :: Type -&gt; Type) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">StripControl
+</span><a href="Shrun.Configuration.Env.Types.html#StripControlSmart"><span class="hs-identifier hs-var">StripControlSmart</span></a></span><span>
+</span><span id="line-355"></span><span>    </span><span id="local-6989586621679232020"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679232020"><span class="hs-identifier hs-var">bad</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-356"></span><span>      </span><span class="annot"><span class="annottext">ParseError -&gt; ReadM StripControl
+forall a. ParseError -&gt; ReadM a
+</span><span class="hs-identifier hs-var">OA.readerAbort</span></span><span> </span><span class="annot"><span class="annottext">(ParseError -&gt; ReadM StripControl)
+-&gt; ParseError -&gt; ReadM StripControl
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-357"></span><span>        </span><span class="annot"><span class="annottext">String -&gt; ParseError
+</span><span class="hs-identifier hs-var">ErrorMsg</span></span><span> </span><span class="annot"><span class="annottext">(String -&gt; ParseError) -&gt; String -&gt; ParseError
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-358"></span><span>          </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Unrecognized strip-control option: &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; String
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/text-1.2.5.0/src/Data.Text.Show.html#unpack"><span class="hs-identifier hs-var">unpack</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679232020"><span class="hs-identifier hs-var">bad</span></a></span><span>
+</span><span id="line-359"></span><span>
+</span><span id="line-360"></span><span class="annot"><a href="Shrun.Configuration.Args.html#fileLoggingParser"><span class="hs-identifier hs-type">fileLoggingParser</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Shrun.Data.FilePathDefault.html#FilePathDefault"><span class="hs-identifier hs-type">FilePathDefault</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-361"></span><span id="fileLoggingParser"><span class="annot"><span class="annottext">fileLoggingParser :: Parser (Maybe FilePathDefault)
+</span><a href="Shrun.Configuration.Args.html#fileLoggingParser"><span class="hs-identifier hs-var hs-var">fileLoggingParser</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-362"></span><span>  </span><span class="annot"><span class="annottext">Parser FilePathDefault -&gt; Parser (Maybe FilePathDefault)
+forall (f :: Type -&gt; Type) a. Alternative f =&gt; f a -&gt; f (Maybe a)
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/Control.Applicative.html#optional"><span class="hs-identifier hs-var">OA.optional</span></a></span><span> </span><span class="annot"><span class="annottext">(Parser FilePathDefault -&gt; Parser (Maybe FilePathDefault))
+-&gt; Parser FilePathDefault -&gt; Parser (Maybe FilePathDefault)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-363"></span><span>    </span><span class="annot"><span class="annottext">ReadM FilePathDefault
+-&gt; Mod OptionFields FilePathDefault -&gt; Parser FilePathDefault
+forall a. ReadM a -&gt; Mod OptionFields a -&gt; Parser a
+</span><span class="hs-identifier hs-var">OA.option</span></span><span>
+</span><span id="line-364"></span><span>      </span><span class="annot"><span class="annottext">ReadM FilePathDefault
+</span><a href="Shrun.Configuration.Args.html#readLogFile"><span class="hs-identifier hs-var">readLogFile</span></a></span><span>
+</span><span id="line-365"></span><span>      </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">[Mod OptionFields FilePathDefault]
+-&gt; Mod OptionFields FilePathDefault
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span>
+</span><span id="line-366"></span><span>          </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String -&gt; Mod OptionFields FilePathDefault
+forall (f :: Type -&gt; Type) a. HasName f =&gt; String -&gt; Mod f a
+</span><span class="hs-identifier hs-var">OA.long</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;file-log&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-367"></span><span>            </span><span class="annot"><span class="annottext">Char -&gt; Mod OptionFields FilePathDefault
+forall (f :: Type -&gt; Type) a. HasName f =&gt; Char -&gt; Mod f a
+</span><span class="hs-identifier hs-var">OA.short</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'f'</span></span><span class="hs-special">,</span><span>
+</span><span id="line-368"></span><span>            </span><span class="annot"><span class="annottext">String -&gt; Mod OptionFields FilePathDefault
+forall (f :: Type -&gt; Type) a. String -&gt; Mod f a
+</span><span class="hs-identifier hs-var">OA.help</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679232018"><span class="hs-identifier hs-var">helpTxt</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-369"></span><span>            </span><span class="annot"><span class="annottext">String -&gt; Mod OptionFields FilePathDefault
+forall (f :: Type -&gt; Type) a. HasMetavar f =&gt; String -&gt; Mod f a
+</span><span class="hs-identifier hs-var">OA.metavar</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;[PATH]&quot;</span></span><span>
+</span><span id="line-370"></span><span>          </span><span class="hs-special">]</span><span>
+</span><span id="line-371"></span><span>      </span><span class="hs-special">)</span><span>
+</span><span id="line-372"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-373"></span><span>    </span><span id="local-6989586621679232018"><span class="annot"><span class="annottext">helpTxt :: String
+</span><a href="#local-6989586621679232018"><span class="hs-identifier hs-var hs-var">helpTxt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-374"></span><span>      </span><span class="annot"><span class="annottext">[String] -&gt; String
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span>
+</span><span id="line-375"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;If a path is supplied, all logs will additionally be written to &quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-376"></span><span>          </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;the supplied file. Furthermore, command logs will be written to &quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-377"></span><span>          </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;the file irrespective of --cmd-log. Console logging is unaffected. &quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-378"></span><span>          </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;This can be useful for investigating command failures. &quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-379"></span><span>          </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;If an empty argument is given (i.e. -f '', --file-log=) then we &quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-380"></span><span>          </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;write to the Xdg config directory e.g. &quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-381"></span><span>          </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;~/.config/shrun/log.&quot;</span></span><span>
+</span><span id="line-382"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-383"></span><span>
+</span><span id="line-384"></span><span class="annot"><a href="Shrun.Configuration.Args.html#readLogFile"><span class="hs-identifier hs-type">readLogFile</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ReadM</span></span><span> </span><span class="annot"><a href="Shrun.Data.FilePathDefault.html#FilePathDefault"><span class="hs-identifier hs-type">FilePathDefault</span></a></span><span>
+</span><span id="line-385"></span><span id="readLogFile"><span class="annot"><span class="annottext">readLogFile :: ReadM FilePathDefault
+</span><a href="Shrun.Configuration.Args.html#readLogFile"><span class="hs-identifier hs-var hs-var">readLogFile</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-386"></span><span>  </span><span class="annot"><span class="annottext">ReadM String
+forall s. IsString s =&gt; ReadM s
+</span><span class="hs-identifier hs-var">OA.str</span></span><span> </span><span class="annot"><span class="annottext">ReadM String
+-&gt; (String -&gt; ReadM FilePathDefault) -&gt; ReadM FilePathDefault
+forall (m :: Type -&gt; Type) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679232009"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679232009"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-387"></span><span>    </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">String -&gt; Bool
+forall (t :: Type -&gt; Type) a. Foldable t =&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/Data.Foldable.html#null"><span class="hs-identifier hs-var">null</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679232009"><span class="hs-identifier hs-var">f</span></a></span><span>
+</span><span id="line-388"></span><span>      </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">FilePathDefault -&gt; ReadM FilePathDefault
+forall (f :: Type -&gt; Type) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">FilePathDefault
+</span><a href="Shrun.Data.FilePathDefault.html#FPDefault"><span class="hs-identifier hs-var">FPDefault</span></a></span><span>
+</span><span id="line-389"></span><span>      </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">FilePathDefault -&gt; ReadM FilePathDefault
+forall (f :: Type -&gt; Type) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; FilePathDefault
+</span><a href="Shrun.Data.FilePathDefault.html#FPManual"><span class="hs-identifier hs-var">FPManual</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679232009"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-390"></span><span>
+</span><span id="line-391"></span><span class="annot"><a href="Shrun.Configuration.Args.html#fileLogStripControlParser"><span class="hs-identifier hs-type">fileLogStripControlParser</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Shrun.Configuration.Env.Types.html#StripControl"><span class="hs-identifier hs-type">StripControl</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-392"></span><span id="fileLogStripControlParser"><span class="annot"><span class="annottext">fileLogStripControlParser :: Parser (Maybe StripControl)
+</span><a href="Shrun.Configuration.Args.html#fileLogStripControlParser"><span class="hs-identifier hs-var hs-var">fileLogStripControlParser</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-393"></span><span>  </span><span class="annot"><span class="annottext">Parser StripControl -&gt; Parser (Maybe StripControl)
+forall (f :: Type -&gt; Type) a. Alternative f =&gt; f a -&gt; f (Maybe a)
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/Control.Applicative.html#optional"><span class="hs-identifier hs-var">OA.optional</span></a></span><span> </span><span class="annot"><span class="annottext">(Parser StripControl -&gt; Parser (Maybe StripControl))
+-&gt; Parser StripControl -&gt; Parser (Maybe StripControl)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-394"></span><span>    </span><span class="annot"><span class="annottext">ReadM StripControl
+-&gt; Mod OptionFields StripControl -&gt; Parser StripControl
+forall a. ReadM a -&gt; Mod OptionFields a -&gt; Parser a
+</span><span class="hs-identifier hs-var">OA.option</span></span><span>
+</span><span id="line-395"></span><span>      </span><span class="annot"><span class="annottext">ReadM StripControl
+</span><a href="Shrun.Configuration.Args.html#readStripControl"><span class="hs-identifier hs-var">readStripControl</span></a></span><span>
+</span><span id="line-396"></span><span>      </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">[Mod OptionFields StripControl] -&gt; Mod OptionFields StripControl
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span>
+</span><span id="line-397"></span><span>          </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String -&gt; Mod OptionFields StripControl
+forall (f :: Type -&gt; Type) a. HasName f =&gt; String -&gt; Mod f a
+</span><span class="hs-identifier hs-var">OA.long</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;file-log-strip-control&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-398"></span><span>            </span><span class="annot"><span class="annottext">String -&gt; Mod OptionFields StripControl
+forall (f :: Type -&gt; Type) a. String -&gt; Mod f a
+</span><span class="hs-identifier hs-var">OA.help</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679232005"><span class="hs-identifier hs-var">helpTxt</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-399"></span><span>            </span><span class="annot"><span class="annottext">String -&gt; Mod OptionFields StripControl
+forall (f :: Type -&gt; Type) a. HasMetavar f =&gt; String -&gt; Mod f a
+</span><span class="hs-identifier hs-var">OA.metavar</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&lt;all | smart | none&gt;&quot;</span></span><span>
+</span><span id="line-400"></span><span>          </span><span class="hs-special">]</span><span>
+</span><span id="line-401"></span><span>      </span><span class="hs-special">)</span><span>
+</span><span id="line-402"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-403"></span><span>    </span><span id="local-6989586621679232005"><span class="annot"><span class="annottext">helpTxt :: String
+</span><a href="#local-6989586621679232005"><span class="hs-identifier hs-var hs-var">helpTxt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-404"></span><span>      </span><span class="annot"><span class="annottext">[String] -&gt; String
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span>
+</span><span id="line-405"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;--strip-control for file logs created with --file-log. &quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-406"></span><span>          </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Defaults to all.&quot;</span></span><span>
+</span><span id="line-407"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-408"></span><span>
+</span><span id="line-409"></span><span class="annot"><a href="Shrun.Configuration.Args.html#commandLoggingParser"><span class="hs-identifier hs-type">commandLoggingParser</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Shrun.Configuration.Env.Types.html#CmdLogging"><span class="hs-identifier hs-type">CmdLogging</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-410"></span><span id="commandLoggingParser"><span class="annot"><span class="annottext">commandLoggingParser :: Parser (Maybe CmdLogging)
+</span><a href="Shrun.Configuration.Args.html#commandLoggingParser"><span class="hs-identifier hs-var hs-var">commandLoggingParser</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-411"></span><span>  </span><span class="annot"><span class="annottext">Parser CmdLogging -&gt; Parser (Maybe CmdLogging)
+forall (f :: Type -&gt; Type) a. Alternative f =&gt; f a -&gt; f (Maybe a)
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/Control.Applicative.html#optional"><span class="hs-identifier hs-var">OA.optional</span></a></span><span> </span><span class="annot"><span class="annottext">(Parser CmdLogging -&gt; Parser (Maybe CmdLogging))
+-&gt; Parser CmdLogging -&gt; Parser (Maybe CmdLogging)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-412"></span><span>    </span><span class="annot"><span class="annottext">CmdLogging -&gt; Mod FlagFields CmdLogging -&gt; Parser CmdLogging
+forall a. a -&gt; Mod FlagFields a -&gt; Parser a
+</span><span class="hs-identifier hs-var">OA.flag'</span></span><span>
+</span><span id="line-413"></span><span>      </span><span class="annot"><span class="annottext">CmdLogging
+</span><a href="Shrun.Configuration.Env.Types.html#Enabled"><span class="hs-identifier hs-var">Enabled</span></a></span><span>
+</span><span id="line-414"></span><span>      </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">[Mod FlagFields CmdLogging] -&gt; Mod FlagFields CmdLogging
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span>
+</span><span id="line-415"></span><span>          </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Char -&gt; Mod FlagFields CmdLogging
+forall (f :: Type -&gt; Type) a. HasName f =&gt; Char -&gt; Mod f a
+</span><span class="hs-identifier hs-var">OA.short</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'l'</span></span><span class="hs-special">,</span><span>
+</span><span id="line-416"></span><span>            </span><span class="annot"><span class="annottext">String -&gt; Mod FlagFields CmdLogging
+forall (f :: Type -&gt; Type) a. HasName f =&gt; String -&gt; Mod f a
+</span><span class="hs-identifier hs-var">OA.long</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;cmd-log&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-417"></span><span>            </span><span class="annot"><span class="annottext">String -&gt; Mod FlagFields CmdLogging
+forall (f :: Type -&gt; Type) a. String -&gt; Mod f a
+</span><span class="hs-identifier hs-var">OA.help</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679231999"><span class="hs-identifier hs-var">helpTxt</span></a></span><span>
+</span><span id="line-418"></span><span>          </span><span class="hs-special">]</span><span>
+</span><span id="line-419"></span><span>      </span><span class="hs-special">)</span><span>
+</span><span id="line-420"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-421"></span><span>    </span><span id="local-6989586621679231999"><span class="annot"><span class="annottext">helpTxt :: String
+</span><a href="#local-6989586621679231999"><span class="hs-identifier hs-var hs-var">helpTxt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-422"></span><span>      </span><span class="annot"><span class="annottext">[String] -&gt; String
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span>
+</span><span id="line-423"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;The default behavior is to swallow logs for the commands &quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-424"></span><span>          </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;themselves. This flag gives each command a console region in &quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-425"></span><span>          </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;which its logs will be printed. Only the latest log per region &quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-426"></span><span>          </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;is show at a given time.&quot;</span></span><span>
+</span><span id="line-427"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-428"></span><span>
+</span><span id="line-429"></span><span class="annot"><a href="Shrun.Configuration.Args.html#commandDisplayParser"><span class="hs-identifier hs-type">commandDisplayParser</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Shrun.Configuration.Env.Types.html#CmdDisplay"><span class="hs-identifier hs-type">CmdDisplay</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-430"></span><span id="commandDisplayParser"><span class="annot"><span class="annottext">commandDisplayParser :: Parser (Maybe CmdDisplay)
+</span><a href="Shrun.Configuration.Args.html#commandDisplayParser"><span class="hs-identifier hs-var hs-var">commandDisplayParser</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-431"></span><span>  </span><span class="annot"><span class="annottext">Parser CmdDisplay -&gt; Parser (Maybe CmdDisplay)
+forall (f :: Type -&gt; Type) a. Alternative f =&gt; f a -&gt; f (Maybe a)
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/Control.Applicative.html#optional"><span class="hs-identifier hs-var">OA.optional</span></a></span><span> </span><span class="annot"><span class="annottext">(Parser CmdDisplay -&gt; Parser (Maybe CmdDisplay))
+-&gt; Parser CmdDisplay -&gt; Parser (Maybe CmdDisplay)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-432"></span><span>    </span><span class="annot"><span class="annottext">CmdDisplay -&gt; Mod FlagFields CmdDisplay -&gt; Parser CmdDisplay
+forall a. a -&gt; Mod FlagFields a -&gt; Parser a
+</span><span class="hs-identifier hs-var">OA.flag'</span></span><span>
+</span><span id="line-433"></span><span>      </span><span class="annot"><span class="annottext">CmdDisplay
+</span><a href="Shrun.Configuration.Env.Types.html#HideKey"><span class="hs-identifier hs-var">HideKey</span></a></span><span>
+</span><span id="line-434"></span><span>      </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">[Mod FlagFields CmdDisplay] -&gt; Mod FlagFields CmdDisplay
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span>
+</span><span id="line-435"></span><span>          </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Char -&gt; Mod FlagFields CmdDisplay
+forall (f :: Type -&gt; Type) a. HasName f =&gt; Char -&gt; Mod f a
+</span><span class="hs-identifier hs-var">OA.short</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'k'</span></span><span class="hs-special">,</span><span>
+</span><span id="line-436"></span><span>            </span><span class="annot"><span class="annottext">String -&gt; Mod FlagFields CmdDisplay
+forall (f :: Type -&gt; Type) a. HasName f =&gt; String -&gt; Mod f a
+</span><span class="hs-identifier hs-var">OA.long</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;key-hide&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-437"></span><span>            </span><span class="annot"><span class="annottext">String -&gt; Mod FlagFields CmdDisplay
+forall (f :: Type -&gt; Type) a. String -&gt; Mod f a
+</span><span class="hs-identifier hs-var">OA.help</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679231992"><span class="hs-identifier hs-var">helpTxt</span></a></span><span>
+</span><span id="line-438"></span><span>          </span><span class="hs-special">]</span><span>
+</span><span id="line-439"></span><span>      </span><span class="hs-special">)</span><span>
+</span><span id="line-440"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-441"></span><span>    </span><span id="local-6989586621679231992"><span class="annot"><span class="annottext">helpTxt :: String
+</span><a href="#local-6989586621679231992"><span class="hs-identifier hs-var hs-var">helpTxt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-442"></span><span>      </span><span class="annot"><span class="annottext">[String] -&gt; String
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span>
+</span><span id="line-443"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;By default, we display the key name from the legend over the &quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-444"></span><span>          </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;actual command that was run, if the former exists. This flag &quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-445"></span><span>          </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;instead shows the literal command. Commands without keys are &quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-446"></span><span>          </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;unaffected.&quot;</span></span><span>
+</span><span id="line-447"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-448"></span><span>
+</span><span id="line-449"></span><span class="annot"><a href="Shrun.Configuration.Args.html#commandsParser"><span class="hs-identifier hs-type">commandsParser</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Shrun.Data.NonEmptySeq.html#NonEmptySeq"><span class="hs-identifier hs-type">NonEmptySeq</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/text-1.2.5.0/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-450"></span><span id="commandsParser"><span class="annot"><span class="annottext">commandsParser :: Parser (NonEmptySeq Text)
+</span><a href="Shrun.Configuration.Args.html#commandsParser"><span class="hs-identifier hs-var hs-var">commandsParser</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-451"></span><span>  </span><span class="annot"><span class="annottext">NonEmpty Text -&gt; NonEmptySeq Text
+forall a. NonEmpty a -&gt; NonEmptySeq a
+</span><a href="Shrun.Data.NonEmptySeq.html#fromNonEmpty"><span class="hs-identifier hs-var">NESeq.fromNonEmpty</span></a></span><span>
+</span><span id="line-452"></span><span>    </span><span class="annot"><span class="annottext">(NonEmpty Text -&gt; NonEmptySeq Text)
+-&gt; Parser (NonEmpty Text) -&gt; Parser (NonEmptySeq Text)
+forall (f :: Type -&gt; Type) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser Text -&gt; Parser (NonEmpty Text)
+forall (f :: Type -&gt; Type) a.
+Alternative f =&gt;
+f a -&gt; f (NonEmpty a)
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/Data.List.NonEmpty.html#some1"><span class="hs-identifier hs-var">NE.some1</span></a></span><span>
+</span><span id="line-453"></span><span>      </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">String -&gt; Text
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/text-1.2.5.0/src/Data.Text.html#pack"><span class="hs-identifier hs-var">T.pack</span></a></span><span>
+</span><span id="line-454"></span><span>          </span><span class="annot"><span class="annottext">(String -&gt; Text) -&gt; Parser String -&gt; Parser Text
+forall (f :: Type -&gt; Type) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ReadM String -&gt; Mod ArgumentFields String -&gt; Parser String
+forall a. ReadM a -&gt; Mod ArgumentFields a -&gt; Parser a
+</span><span class="hs-identifier hs-var">OA.argument</span></span><span> </span><span class="annot"><span class="annottext">ReadM String
+forall s. IsString s =&gt; ReadM s
+</span><span class="hs-identifier hs-var">OA.str</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; Mod ArgumentFields String
+forall (f :: Type -&gt; Type) a. HasMetavar f =&gt; String -&gt; Mod f a
+</span><span class="hs-identifier hs-var">OA.metavar</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Commands...&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-455"></span><span>      </span><span class="hs-special">)</span><span>
+</span><span id="line-456"></span><span>
+</span><span id="line-457"></span><span class="annot"><a href="Shrun.Configuration.Args.html#disableLoggingParser"><span class="hs-identifier hs-type">disableLoggingParser</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/ghc-prim-0.8.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-458"></span><span id="disableLoggingParser"><span class="annot"><span class="annottext">disableLoggingParser :: Parser (Maybe Bool)
+</span><a href="Shrun.Configuration.Args.html#disableLoggingParser"><span class="hs-identifier hs-var hs-var">disableLoggingParser</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-459"></span><span>  </span><span class="annot"><span class="annottext">Parser Bool -&gt; Parser (Maybe Bool)
+forall (f :: Type -&gt; Type) a. Alternative f =&gt; f a -&gt; f (Maybe a)
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/Control.Applicative.html#optional"><span class="hs-identifier hs-var">OA.optional</span></a></span><span> </span><span class="annot"><span class="annottext">(Parser Bool -&gt; Parser (Maybe Bool))
+-&gt; Parser Bool -&gt; Parser (Maybe Bool)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-460"></span><span>    </span><span class="annot"><span class="annottext">Bool -&gt; Mod FlagFields Bool -&gt; Parser Bool
+forall a. a -&gt; Mod FlagFields a -&gt; Parser a
+</span><span class="hs-identifier hs-var">OA.flag'</span></span><span>
+</span><span id="line-461"></span><span>      </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/ghc-prim-0.8.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-462"></span><span>      </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">[Mod FlagFields Bool] -&gt; Mod FlagFields Bool
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span>
+</span><span id="line-463"></span><span>          </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Char -&gt; Mod FlagFields Bool
+forall (f :: Type -&gt; Type) a. HasName f =&gt; Char -&gt; Mod f a
+</span><span class="hs-identifier hs-var">OA.short</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'d'</span></span><span class="hs-special">,</span><span>
+</span><span id="line-464"></span><span>            </span><span class="annot"><span class="annottext">String -&gt; Mod FlagFields Bool
+forall (f :: Type -&gt; Type) a. HasName f =&gt; String -&gt; Mod f a
+</span><span class="hs-identifier hs-var">OA.long</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;disable-log&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-465"></span><span>            </span><span class="annot"><span class="annottext">String -&gt; Mod FlagFields Bool
+forall (f :: Type -&gt; Type) a. String -&gt; Mod f a
+</span><span class="hs-identifier hs-var">OA.help</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679231983"><span class="hs-identifier hs-var">helpTxt</span></a></span><span>
+</span><span id="line-466"></span><span>          </span><span class="hs-special">]</span><span>
+</span><span id="line-467"></span><span>      </span><span class="hs-special">)</span><span>
+</span><span id="line-468"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-469"></span><span>    </span><span id="local-6989586621679231983"><span class="annot"><span class="annottext">helpTxt :: String
+</span><a href="#local-6989586621679231983"><span class="hs-identifier hs-var hs-var">helpTxt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-470"></span><span>      </span><span class="annot"><span class="annottext">[String] -&gt; String
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span>
+</span><span id="line-471"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;The option disables _all_ logging. This is primarily useful for &quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-472"></span><span>          </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;debugging or testing where logging is undesirable.&quot;</span></span><span>
+</span><span id="line-473"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-474"></span></pre></body></html>

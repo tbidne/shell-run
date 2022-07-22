@@ -1,0 +1,119 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-comment">-- | Provides the 'FileSystemReader' typeclass.</span><span>
+</span><span id="line-2"></span><span class="hs-comment">--</span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- @since 0.5</span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Shrun.Effects.FileSystemReader</span><span>
+</span><span id="line-5"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Shrun.Effects.FileSystemReader.html#FileSystemReader"><span class="hs-identifier">FileSystemReader</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-6"></span><span>    </span><span class="annot"><a href="Shrun.Effects.FileSystemReader.html#getShrunXdgConfig"><span class="hs-identifier">getShrunXdgConfig</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Options.Applicative</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">execParser</span></span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Shrun.Configuration.Args.html"><span class="hs-identifier">Shrun.Configuration.Args</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Shrun.Configuration.Args.html#Args"><span class="hs-identifier">Args</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Shrun.Configuration.Args.html#parserInfoArgs"><span class="hs-identifier">parserInfoArgs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Shrun.Prelude.html"><span class="hs-identifier">Shrun.Prelude</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/directory-1.3.6.2/src/System.Directory.html"><span class="hs-identifier">System.Directory</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/directory-1.3.6.2/src/System.Directory.Internal.Common.html#XdgDirectory"><span class="hs-identifier">XdgDirectory</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/directory-1.3.6.2/src/System.Directory.html"><span class="hs-identifier">System.Directory</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Dir</span></span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-comment">-- | Represents a readable filesystem.</span><span>
+</span><span id="line-17"></span><span class="hs-comment">--</span><span>
+</span><span id="line-18"></span><span class="hs-comment">-- @since 0.5</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">class</span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#Monad"><span class="hs-identifier hs-type">Monad</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679233008"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span id="FileSystemReader"><span class="annot"><a href="Shrun.Effects.FileSystemReader.html#FileSystemReader"><span class="hs-identifier hs-var">FileSystemReader</span></a></span></span><span> </span><span id="local-6989586621679233008"><span class="annot"><a href="#local-6989586621679233008"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-comment">-- | Returns the default directory e.g. Xdg config dir.</span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-comment">-- @since 0.5</span><span>
+</span><span id="line-23"></span><span>  </span><span id="getXdgConfig"><span class="annot"><a href="Shrun.Effects.FileSystemReader.html#getXdgConfig"><span class="hs-identifier hs-type">getXdgConfig</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679233008"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span>  </span><span class="hs-comment">-- | Reads a file.</span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-comment">-- @since 0.5</span><span>
+</span><span id="line-28"></span><span>  </span><span id="readFile"><span class="annot"><a href="Shrun.Effects.FileSystemReader.html#readFile"><span class="hs-identifier hs-type">readFile</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679233008"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/text-1.2.5.0/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-comment">-- | Test for file existence.</span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-comment">-- @since 0.5</span><span>
+</span><span id="line-33"></span><span>  </span><span id="doesFileExist"><span class="annot"><a href="Shrun.Effects.FileSystemReader.html#doesFileExist"><span class="hs-identifier hs-type">doesFileExist</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679233008"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/ghc-prim-0.8.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-comment">-- | Get CLI args.</span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-comment">-- @since 0.5</span><span>
+</span><span id="line-38"></span><span>  </span><span id="getArgs"><span class="annot"><a href="Shrun.Effects.FileSystemReader.html#getArgs"><span class="hs-identifier hs-type">getArgs</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679233008"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Shrun.Configuration.Args.html#Args"><span class="hs-identifier hs-type">Args</span></a></span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span class="hs-comment">-- | @since 0.5</span><span>
+</span><span id="line-41"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Shrun.Effects.FileSystemReader.html#FileSystemReader"><span class="hs-identifier hs-type">FileSystemReader</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/ghc-prim-0.8.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-42"></span><span>  </span><span id="local-6989586621679232966"><span class="annot"><span class="annottext">getXdgConfig :: FilePath -&gt; IO FilePath
+</span><a href="#local-6989586621679232966"><span class="hs-identifier hs-var hs-var hs-var hs-var">getXdgConfig</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">XdgDirectory -&gt; FilePath -&gt; IO FilePath
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/directory-1.3.6.2/src/System.Directory.html#getXdgDirectory"><span class="hs-identifier hs-var">Dir.getXdgDirectory</span></a></span><span> </span><span class="annot"><span class="annottext">XdgDirectory
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/directory-1.3.6.2/src/System.Directory.Internal.Common.html#XdgConfig"><span class="hs-identifier hs-var">XdgConfig</span></a></span><span>
+</span><span id="line-43"></span><span>  </span><span id="local-6989586621679232963"><span class="annot"><span class="annottext">readFile :: FilePath -&gt; IO Text
+</span><a href="#local-6989586621679232963"><span class="hs-identifier hs-var hs-var hs-var hs-var">readFile</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; IO Text
+</span><a href="Shrun.Prelude.html#readFileUtf8Lenient"><span class="hs-identifier hs-var">readFileUtf8Lenient</span></a></span><span>
+</span><span id="line-44"></span><span>  </span><span id="local-6989586621679232961"><span class="annot"><span class="annottext">doesFileExist :: FilePath -&gt; IO Bool
+</span><a href="#local-6989586621679232961"><span class="hs-identifier hs-var hs-var hs-var hs-var">doesFileExist</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; IO Bool
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/directory-1.3.6.2/src/System.Directory.html#doesFileExist"><span class="hs-identifier hs-var">Dir.doesFileExist</span></a></span><span>
+</span><span id="line-45"></span><span>  </span><span id="local-6989586621679232959"><span class="annot"><span class="annottext">getArgs :: IO Args
+</span><a href="#local-6989586621679232959"><span class="hs-identifier hs-var hs-var hs-var hs-var">getArgs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ParserInfo Args -&gt; IO Args
+forall a. ParserInfo a -&gt; IO a
+</span><span class="hs-identifier hs-var">execParser</span></span><span> </span><span class="annot"><span class="annottext">ParserInfo Args
+</span><a href="Shrun.Configuration.Args.html#parserInfoArgs"><span class="hs-identifier hs-var">parserInfoArgs</span></a></span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span class="hs-comment">-- | @since 0.5</span><span>
+</span><span id="line-48"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679232994"><span id="local-6989586621679232995"><span class="annot"><a href="Shrun.Effects.FileSystemReader.html#FileSystemReader"><span class="hs-identifier hs-type">FileSystemReader</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679232995"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Shrun.Effects.FileSystemReader.html#FileSystemReader"><span class="hs-identifier hs-type">FileSystemReader</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/transformers-0.5.6.2/src/Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-type">ReaderT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679232994"><span class="hs-identifier hs-type">env</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679232995"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-49"></span><span>  </span><span id="local-6989586621679232944"><span class="annot"><span class="annottext">getXdgConfig :: FilePath -&gt; ReaderT env m FilePath
+</span><a href="#local-6989586621679232944"><span class="hs-identifier hs-var hs-var hs-var hs-var">getXdgConfig</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m FilePath -&gt; ReaderT env m FilePath
+forall (t :: (Type -&gt; Type) -&gt; Type -&gt; Type) (m :: Type -&gt; Type) a.
+(MonadTrans t, Monad m) =&gt;
+m a -&gt; t m a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/transformers-0.5.6.2/src/Control.Monad.Trans.Class.html#lift"><span class="hs-identifier hs-var">lift</span></a></span><span> </span><span class="annot"><span class="annottext">(m FilePath -&gt; ReaderT env m FilePath)
+-&gt; (FilePath -&gt; m FilePath) -&gt; FilePath -&gt; ReaderT env m FilePath
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; m FilePath
+forall (m :: Type -&gt; Type).
+FileSystemReader m =&gt;
+FilePath -&gt; m FilePath
+</span><a href="Shrun.Effects.FileSystemReader.html#getXdgConfig"><span class="hs-identifier hs-var">getXdgConfig</span></a></span><span>
+</span><span id="line-50"></span><span>  </span><span id="local-6989586621679232938"><span class="annot"><span class="annottext">readFile :: FilePath -&gt; ReaderT env m Text
+</span><a href="#local-6989586621679232938"><span class="hs-identifier hs-var hs-var hs-var hs-var">readFile</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m Text -&gt; ReaderT env m Text
+forall (t :: (Type -&gt; Type) -&gt; Type -&gt; Type) (m :: Type -&gt; Type) a.
+(MonadTrans t, Monad m) =&gt;
+m a -&gt; t m a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/transformers-0.5.6.2/src/Control.Monad.Trans.Class.html#lift"><span class="hs-identifier hs-var">lift</span></a></span><span> </span><span class="annot"><span class="annottext">(m Text -&gt; ReaderT env m Text)
+-&gt; (FilePath -&gt; m Text) -&gt; FilePath -&gt; ReaderT env m Text
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; m Text
+forall (m :: Type -&gt; Type).
+FileSystemReader m =&gt;
+FilePath -&gt; m Text
+</span><a href="Shrun.Effects.FileSystemReader.html#readFile"><span class="hs-identifier hs-var">readFile</span></a></span><span>
+</span><span id="line-51"></span><span>  </span><span id="local-6989586621679232934"><span class="annot"><span class="annottext">doesFileExist :: FilePath -&gt; ReaderT env m Bool
+</span><a href="#local-6989586621679232934"><span class="hs-identifier hs-var hs-var hs-var hs-var">doesFileExist</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m Bool -&gt; ReaderT env m Bool
+forall (t :: (Type -&gt; Type) -&gt; Type -&gt; Type) (m :: Type -&gt; Type) a.
+(MonadTrans t, Monad m) =&gt;
+m a -&gt; t m a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/transformers-0.5.6.2/src/Control.Monad.Trans.Class.html#lift"><span class="hs-identifier hs-var">lift</span></a></span><span> </span><span class="annot"><span class="annottext">(m Bool -&gt; ReaderT env m Bool)
+-&gt; (FilePath -&gt; m Bool) -&gt; FilePath -&gt; ReaderT env m Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; m Bool
+forall (m :: Type -&gt; Type).
+FileSystemReader m =&gt;
+FilePath -&gt; m Bool
+</span><a href="Shrun.Effects.FileSystemReader.html#doesFileExist"><span class="hs-identifier hs-var">doesFileExist</span></a></span><span>
+</span><span id="line-52"></span><span>  </span><span id="local-6989586621679232930"><span class="annot"><span class="annottext">getArgs :: ReaderT env m Args
+</span><a href="#local-6989586621679232930"><span class="hs-identifier hs-var hs-var hs-var hs-var">getArgs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m Args -&gt; ReaderT env m Args
+forall (t :: (Type -&gt; Type) -&gt; Type -&gt; Type) (m :: Type -&gt; Type) a.
+(MonadTrans t, Monad m) =&gt;
+m a -&gt; t m a
+</span><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/transformers-0.5.6.2/src/Control.Monad.Trans.Class.html#lift"><span class="hs-identifier hs-var">lift</span></a></span><span> </span><span class="annot"><span class="annottext">m Args
+forall (m :: Type -&gt; Type). FileSystemReader m =&gt; m Args
+</span><a href="Shrun.Effects.FileSystemReader.html#getArgs"><span class="hs-identifier hs-var">getArgs</span></a></span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- | Gets the Xdg config directory for the shrun application.</span><span>
+</span><span id="line-55"></span><span class="hs-comment">--</span><span>
+</span><span id="line-56"></span><span class="hs-comment">-- @since 0.5</span><span>
+</span><span id="line-57"></span><span id="local-6989586621679232985"><span class="annot"><a href="Shrun.Effects.FileSystemReader.html#getShrunXdgConfig"><span class="hs-identifier hs-type">getShrunXdgConfig</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Shrun.Effects.FileSystemReader.html#FileSystemReader"><span class="hs-identifier hs-type">FileSystemReader</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679232985"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679232985"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/16s6s6gbs6bxf3x75xpna03ygn755wig-ghc-9.2.3-doc/share/doc/ghc/html/libraries/base-4.16.2.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span></span><span>
+</span><span id="line-58"></span><span id="getShrunXdgConfig"><span class="annot"><span class="annottext">getShrunXdgConfig :: forall (m :: Type -&gt; Type). FileSystemReader m =&gt; m FilePath
+</span><a href="Shrun.Effects.FileSystemReader.html#getShrunXdgConfig"><span class="hs-identifier hs-var hs-var">getShrunXdgConfig</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; m FilePath
+forall (m :: Type -&gt; Type).
+FileSystemReader m =&gt;
+FilePath -&gt; m FilePath
+</span><a href="Shrun.Effects.FileSystemReader.html#getXdgConfig"><span class="hs-identifier hs-var">getXdgConfig</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;shrun&quot;</span></span><span>
+</span><span id="line-59"></span></pre></body></html>
